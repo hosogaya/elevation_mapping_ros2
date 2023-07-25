@@ -26,6 +26,7 @@ find_package(rcutils REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(filters REQUIRED)
 find_package(grid_map_filters REQUIRED)
@@ -43,6 +44,44 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(${PROJECT_NAME}_node
+  src/elevation_mapping_node.cpp
+  src/ElevationMapping.cpp
+  src/ElevationMap.cpp
+  src/RobotMotionUpdater
+  src/sensor_processing/SensorProcessorBase.cpp
+  src/sensor_processing/PerfectSensorProcessor.cpp
+)
+
+target_include_directories(${PROJECT_NAME}_node
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}> # Eigen3
+  $<BUILD_INTERFACE:${PCL_INCLUDE_DIR}> # Eigen3
+)
+
+target_link_libraries(${PROJECT_NAME}_node
+  ${EIGEN3_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+
+ament_target_dependencies(${PROJECT_NAME}_node
+  grid_map_msgs
+  grid_map_core
+  grid_map_ros
+  rclcpp
+  geometry_msgs
+  tf2_eigen
+  tf2_ros
+  tf2
+  filters
+)
+
+install(TARGETS
+  ${PROJECT_NAME}_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 install(
   DIRECTORY
