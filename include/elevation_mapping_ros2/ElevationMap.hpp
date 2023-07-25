@@ -5,7 +5,8 @@
 */
 
 #include <rclcpp/rclcpp.hpp>
-#include <grid_map_core.hpp>
+#include <grid_map_core/grid_map_core.hpp>
+#include <grid_map_core/iterators/EllipseIterator.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -15,20 +16,69 @@
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include <elevation_mapping_ros2/TypeDef.hpp>
+#include <elevation_mapping_ros2/WeightedEmpiricalCumulativeDistributionFunction.hpp>
+
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Eigenvalues>
+
 namespace elevation_mapping
 {
-class ElevationMap: public rclcpp::Node
+template <typename Scalar>
+struct VarianceClampOperator
+{
+    VarianceClampOperator(const Scalar& min, const Scalar& max) : min_variance_(min), max_variance_(max){}
+    const Scalar operator()(const Scalar& x) const 
+    {
+        return x < min_variance_ ? min_variance_ : (x > max_variance_ ? std::numeric_limits<float>::infinity() : x);
+    }
+    Scalar min_variance_, max_variance_;
+};
+
+class ElevationMap
 {
 public:
-    ElevationMap();
+    explicit ElevationMap(const rclcpp::Node* _node);
     ~ElevationMap();
 
+    bool add (PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time, const Eigen::Affine3d& _transform_sensor2map_);
+    bool fuseAll();
+    bool fuse(const grid_map::Index& _top_left_index, const grid_map::Size& size);
+    bool update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp);
+    bool clear();
+    void resetFusedMap();
+    bool clean(); // cleans the elevation map data to stay within the specified bounds. 
+    void move(const grid_map::Position& position);
+    void visibilityCleanup(const rclcpp::Time& _time_stamp);
+
+    void readParameter(rclcpp::Node* _node);
+    
+    // getter
+    const std::string& getFrameID() const;
+    const rclcpp::Time& getTimeOfLastUpdate() const;
+    GridMap& getRawMap();
+    GridMap& getFusedMap();
 private:
-    bool setParameters();
+    static float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
-    std::unique_ptr<grid_map::GridMap> raw_map_;
-    std::unique_ptr<grid_map::GridMap> fused_map_;
 
+    std::shared_ptr<rclcpp::Clock> system_clock_;
+    std::shared_ptr<rclcpp::Clock> ros_clock_;
+    rclcpp::Logger logger_;
+    rclcpp::Time initial_time_;
+    rclcpp::Time last_update_time_;
+
+    GridMap raw_map_; //
+    GridMap fused_map_; // update data by using covariance of map position
+    GridMap visibility_clean_up_map_;
+
+    // parameter
+    float min_normal_variance_, max_normal_variance_;
+    float min_horizontal_variance_, max_horizontal_variance_;
+    float mahalanobis_distance_thres_;
+    rclcpp::Time scanning_duration_;
+    float increase_height_alpha_; // (0, 1)
+    float multi_height_noise_;
 };
 
 }
