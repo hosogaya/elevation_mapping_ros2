@@ -43,7 +43,7 @@ bool SensorProcessorBase::process(const PointCloudType& _point_cloud, const Eige
 
     // remove outside limits in map frame
     std::vector<PointCloudType::Ptr> point_clouds{point_cloud_sensor_frame, _processed_point_cloud_map_frame};
-    removeOutsideLimits(_processed_point_clourd_map_frame, point_clouds);
+    removeOutsideLimits(_processed_point_cloud_map_frame, point_clouds);
 
     // compute variance 
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);

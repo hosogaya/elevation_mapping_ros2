@@ -93,8 +93,8 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // map_.visibilityCleanup();
     // map_.fuseAll();
 
-    grid_map_msgs::msg::GridMap message;
-    grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), message);
+    grid_map_msgs::msg::GridMap::UniquePtr message;
+    message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap());
     pub_raw_map_->publish(message);
 }
 
@@ -129,7 +129,7 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 {
-    if (_time_stamp + time_tolerance_ < map_.getTimeOfLastUpdate())
+    if (_time_stamp + time_tolerance_prediction_ < map_.getTimeOfLastUpdate())
     {
         RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return false;
@@ -160,7 +160,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     tf2::fromMsg(pose_msg, transform);
     
     // compute map variacne update from motion prediction
-    robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp)
+    robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp);
 
     return true;
 }
@@ -168,18 +168,17 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 bool ElevationMapping::readParameters()
 {
     // elevation mapping
-    declare_parameter("use_pose_update", use_pose_update_, true);
-    declare_parameter("pose_cache_size", pose_cache_size_, 10);
-    declare_parameter("track_point_frame_id", track_point_frame_id_, "/base_link");
-    float time_tolerance; // miliseconds
-    declare_parameter("time_tolerance_prediction", time_tolerance, 100);
-    time_tolerance_prediction_(time_tolerance*1e6); // milli seconds -> nano seconds
+    use_pose_update_ = declare_parameter("use_pose_update", true);
+    pose_cache_size_ = declare_parameter("pose_cache_size", 10);
+    track_point_frame_id_ = declare_parameter("track_point_frame_id", "/base_link");
+    float time_tolerance = declare_parameter("time_tolerance_prediction", 100);
+    time_tolerance_prediction_(time_tolerance*1.0e6f); // milli seconds -> nano seconds
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
     std::string sensor_type, sensor_frame, map_frame;
-    declare_parameter("sensor_frame", sensor_frame, "/sensor");
-    declare_parameter("map_frame", map_frame, "/map")
-    declare_parameter("sensor_processor_type", sensor_type, "perfect");
+    sensor_frame = declare_parameter("sensor_frame", "/sensor");
+    map_frame = declare_parameter("map_frame", "/map")
+    sensor_type = declare_parameter("sensor_processor_type", "perfect");
     if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, this->get_logger());
     else 
     {
@@ -188,7 +187,7 @@ bool ElevationMapping::readParameters()
     }
 
     map_.readParameter(this);
-    sensor_processor_->readParam(this);
+    sensor_processor_->readParameters(this);
 
 
     return true;

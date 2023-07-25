@@ -60,7 +60,7 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
             {
                 grid_map::Position position;
                 _map.getRawMap().getPosition({i, j}, position);
-                cell_position = {position.x, position.y, height};
+                cell_position{position.x, position.y, height};
 
                 const Eigen::Matrix3d rotation_jac = -computeSkewMatrixfromVector(position_robot2map + cell_position)*map2pre_robot_rotation_inverse;
                 
@@ -68,7 +68,7 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
                 const Eigen::Matrix2f rotation_variance_update = (rotation_jac*rotation_covariance*rotation_jac.transpose()).topLeftCorner<2,2>().cast<float>();
 
                 // variance update
-                variance_update(i, j) = translation_variance_update;
+                variance_update(i, j) = translation_variance_update.z();
                 horizontal_variance_update_x(i, j) = translation_variance_update.x() + rotation_variance_update(0, 0);
                 horizontal_variance_update_y(i, j) = translation_variance_update.y() + rotation_variance_update(1, 1);
                 horizontal_variance_update_xy(i, j) = rotation_variance_update(0, 1);

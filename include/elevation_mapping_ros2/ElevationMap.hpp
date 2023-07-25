@@ -3,7 +3,7 @@
  * raw_map_: not fused map. update this map.
  * fused_map_: raw_maps are fused to this map. 
 */
-
+#pragma once
 #include <rclcpp/rclcpp.hpp>
 #include <grid_map_core/grid_map_core.hpp>
 #include <grid_map_core/iterators/EllipseIterator.hpp>
@@ -65,7 +65,6 @@ private:
     std::shared_ptr<rclcpp::Clock> system_clock_;
     std::shared_ptr<rclcpp::Clock> ros_clock_;
     rclcpp::Logger logger_;
-    rclcpp::Time initial_time_;
     rclcpp::Time last_update_time_;
 
     GridMap raw_map_; //
