@@ -8,7 +8,7 @@ namespace elevation_mapping
 class PerfectSensorProcessor : public SensorProcessorBase
 {
 public: 
-    explicit PerfectSensorProcessor(const std::string sensor_frame, const std::string map_frame);
+    explicit PerfectSensorProcessor(const std::string sensor_frame, const std::string map_frame, const std::string& _robot_frame);
 
     ~PerfectSensorProcessor();
     void readParameters(rclcpp::Node* _node) override;

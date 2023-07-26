@@ -31,7 +31,7 @@ namespace elevation_mapping
 class SensorProcessorBase
 {
 public: 
-    SensorProcessorBase(const std::string& sensor_frame, const std::string& map_frame);
+    SensorProcessorBase(const std::string& sensor_frame, const std::string& map_frame, const std::string& _robot_frame);
     ~SensorProcessorBase();
 
     bool process(const PointCloudType& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
@@ -57,7 +57,7 @@ protected:
     // rclcpp::Logger logger_;
 
     const std::string kSensorFrameID_;
-    const std::string kBaseLinkID_;
+    const std::string kRobotFrameID_;
     const std::string kMapFrameID_;
 
     // transform
