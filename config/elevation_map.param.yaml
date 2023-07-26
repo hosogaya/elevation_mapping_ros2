@@ -1,5 +1,5 @@
 /**:
-  ros__prameters:
+  ros__parameters:
     map_frame: "map"
     robot_frame: "base_link"
     sensor_frame: "sensor"
@@ -16,7 +16,7 @@
     increase_height_alpha: 0.5
     multi_height_noise: 25.0
     # 
-    use_voxel_filter: true
+    use_voxel_filter: false
     voxel_leaf_size: 5.0
     pass_filter_lower_threshold: -100.0
     pass_filter_upper_threshold: 100.0
