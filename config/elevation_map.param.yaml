@@ -1,3 +1,5 @@
 /**:
   ros__prameters:
-   
+   map_frame: "map"
+   robot_frame: "base_link"
+   sensor_frame: "sensor"
