@@ -87,7 +87,7 @@ bool SensorProcessorBase::transformPointCloud(const PointCloudType& _point_cloud
         transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, time_stamp, tf2::durationFromSec(1.0));
     }
     catch (tf2::TransformException& ex) {
-        // RCLCPP_ERROR(logger_, "%s", ex.what());
+        RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "%s", ex.what());
         return false;
     }
     Eigen::Affine3d transform = tf2::transformToEigen(transformTF);
@@ -129,10 +129,10 @@ bool SensorProcessorBase::removeOutsideLimits(const PointCloudType::Ptr& _refere
 {
     if (!std::isfinite(param_pass_through_filter_.lower_threshold_) && !std::isfinite(param_pass_through_filter_.upper_threshold_))
     {
-        // RCLCPP_DEBUG(logger_, "pass through filter is not applied");
+        RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "pass through filter is not applied");
         return true;
     }
-    // RCLCPP_DEBUG(logger_, "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base", param_pass_through_filter_.lower_threshold_, param_pass_through_filter_.upper_threshold_);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base", param_pass_through_filter_.lower_threshold_, param_pass_through_filter_.upper_threshold_);
 
     pcl::PassThrough<PointType> pass_through_filter(true);
     pass_through_filter.setInputCloud(_reference);
@@ -152,7 +152,7 @@ bool SensorProcessorBase::removeOutsideLimits(const PointCloudType::Ptr& _refere
         extract_indices_filter.filter(temp_point_cloud);
         point_cloud->points.swap(temp_point_cloud.points);
     }
-    // RCLCPP_DEBUG(logger_, "Remove point out side limits. Reduced point cloud to %ld points", (_point_clouds[0]->size()));
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Remove point out side limits. Reduced point cloud to %ld points", (_point_clouds[0]->size()));
     return true;
 }
 

@@ -80,5 +80,7 @@ protected:
         double lower_threshold_ = -std::numeric_limits<double>::infinity(); // relative to map frame
         double upper_threshold_ = std::numeric_limits<double>::infinity();
     } param_pass_through_filter_;
+
+    std::string logger_name_ = "SensorProcessor";
 };
 }

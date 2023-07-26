@@ -51,7 +51,7 @@ public:
     void move(const grid_map::Position& position);
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
 
-    void readParameter(rclcpp::Node* _node);
+    void readParameters(rclcpp::Node* _node);
     
     // getter
     const std::string& getFrameID() const;
@@ -78,6 +78,7 @@ private:
     float mahalanobis_distance_thres_;
     float increase_height_alpha_; // (0, 1)
     float multi_height_noise_;
+    std::string logger_name_;
 };
 
 }

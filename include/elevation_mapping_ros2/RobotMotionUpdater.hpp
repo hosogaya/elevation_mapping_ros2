@@ -20,6 +20,7 @@ public:
     ~RobotMotionUpdater();
     
     bool update(ElevationMap& _map, const PoseTransform& _pose_transform, const PoseCovariance& _pose_covariance, const rclcpp::Time& _time_stamp);
+    void readParameters(rclcpp::Node* _node);
 private:
 
     bool computeReducedCovariance(const PoseTransform& _pose_transform, const PoseCovariance& _pose_covariance, ReducedCovariance& _reduced_covariance);
@@ -33,6 +34,9 @@ private:
     // transform
     Eigen::Matrix<double, 4, 4> pre_reduced_covariance_;
     Eigen::Affine3d pre_robot_pose_;
+
+    // params
+    std::string logger_name_;
 
 };
 }

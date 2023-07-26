@@ -135,7 +135,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
     const rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    // RCLCPP_DEBUG(logger_, "Raw map has been updated with a new point in %f s", duration.seconds());
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
 
     return true;
 }
@@ -280,7 +280,7 @@ bool ElevationMap::fuse(const grid_map::Index& _top_left_index, const grid_map::
 
     fused_map_.setTimestamp(copy_raw_map.getTimestamp());
     const rclcpp::Duration duration(system_clock_->now()-method_start_time);
-    // RCLCPP_DEBUG(logger_, "Elevation map has been fused in %f s", duration.seconds());
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevation map has been fused in %f s", duration.seconds());
 
     return true;
 } // end of fuse
@@ -373,7 +373,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
     } // end of remove position
 
     rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    // RCLCPP_DEBUG(logger_, "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
@@ -385,7 +385,7 @@ bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Mat
         (grid_map::Index(_horizontal_variance_x.rows(), _horizontal_variance_y.cols()) == size).all() &&
         (grid_map::Index(_horizontal_variance_x.rows(), _horizontal_variance_xy.cols()) == size).all()))
     {
-        // RCLCPP_ERROR(logger_, "The size of the update matrices does not match.");
+        RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "The size of the update matrices does not match.");
         return false;
     }   
 
@@ -429,7 +429,7 @@ void ElevationMap::move(const grid_map::Position& position)
     std::vector<grid_map::BufferRegion> new_region;
     if (raw_map_.move(position, new_region))
     {
-        // RCLCPP_DEBUG(logger_, "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
+        RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
 
         // "dynamic time" layer is meant to be interpreted as integer values, therefore nan:s need to be zero.
         grid_map::Matrix& dynamic_time{raw_map_.get("dynamic_time")};
@@ -461,7 +461,7 @@ float ElevationMap::cumulativeDistributionFunction(float x, float mean, float st
   return 0.5 * std::erfc(-(x - mean) / (standardDeviation * std::sqrt(2.0)));
 }
 
-void ElevationMap::readParameter(rclcpp::Node* _node)
+void ElevationMap::readParameters(rclcpp::Node* _node)
 {
     min_normal_variance_ = _node->declare_parameter("min_normal_variance", 5.0);
     max_normal_variance_ = _node->declare_parameter("max_normal_variance", 100.0);
@@ -471,6 +471,7 @@ void ElevationMap::readParameter(rclcpp::Node* _node)
     scanning_duration_ = rclcpp::Time(static_cast<uint64_t>(_node->declare_parameter("scanning_duration", 0.1))*1e9); // seconds -> nanosec
     increase_height_alpha_ = _node->declare_parameter("increase_height_alpha", 0.5);
     multi_height_noise_ = _node->declare_parameter("multi_height_noise", 25.0);    
+    logger_name_ = _node->declare_parameter("logger_name_ElevationMap", "ElevationMap");
 }
 
 }

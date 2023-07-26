@@ -67,6 +67,7 @@ void PerfectSensorProcessor::readParameters(rclcpp::Node* _node)
     param_voxel_grid_fitler_.leaf_size = _node->declare_parameter("voxel_leaf_size", 5.0);
     param_pass_through_filter_.lower_threshold_ = _node->declare_parameter("pass_filter_lower_threshold", -std::numeric_limits<double>::infinity());
     param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
+    logger_name_ = _node->declare_parameter("logger_name_PerfectSensorProcessor", "PerfectSensorProcessor");
 }
 
 }
