@@ -21,7 +21,12 @@ ElevationMap::~ElevationMap() {}
 bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time_stamp, const Eigen::Affine3d& _transform_sensor2map_)
 {
     const rclcpp::Time method_start_time = system_clock_->now(); // @todo convert to wall clock
-
+    std::stringstream ss;
+    for (const std::string& layer: raw_map_.getLayers())
+    {
+        ss << layer << ", ";
+    }
+    RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Raw map layers: " << ss.str());
     // update initial time if it is not initiallized.
     if (initial_time_.seconds() == 0)
     {
@@ -43,6 +48,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     auto& sensor_y_at_lowest_scan_layer = raw_map_["sensor_y_at_lowest_scan"];
     auto& sensor_z_at_lowest_scan_layer = raw_map_["sensor_z_at_lowest_scan"];
 
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating basic layer name");
     std::vector<Eigen::Ref<const grid_map::Matrix>> basic_layer;
     for (const std::string& layer: raw_map_.getBasicLayers())
     {
@@ -50,6 +56,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     }
 
     // for all points
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Processing all point clouds.");
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
         auto& point = _point_cloud->points[i];

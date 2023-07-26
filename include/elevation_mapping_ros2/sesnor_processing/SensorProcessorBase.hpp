@@ -15,8 +15,9 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
-
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/filter.h>
+
 #include <elevation_mapping_ros2/TypeDef.hpp>
 
 #include <rclcpp/rclcpp.hpp>
@@ -24,6 +25,8 @@
 #include <tf2/transform_datatypes.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_eigen/tf2_eigen.h>
+
+#include <sensor_msgs/msg/point_cloud2.hpp>
 // #include <tf2_helpers/tf2_conversion_helpers.hpp>
 
 namespace elevation_mapping
@@ -34,12 +37,12 @@ public:
     SensorProcessorBase(const std::string& sensor_frame, const std::string& map_frame, const std::string& _robot_frame);
     ~SensorProcessorBase();
 
-    bool process(const PointCloudType& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
+    bool process(const sensor_msgs::msg::PointCloud2::UniquePtr& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
     bool isFirstTfAvailable() const {return first_tf_available_;}
     const Eigen::Affine3d& getTransformSensor2Map() {return transform_sensor2map_;}
     virtual void readParameters(rclcpp::Node* _node) = 0;
 protected:
-    bool updateTransformations(const rclcpp::Time& time_stamp);
+    bool updateTransformations();
     bool transformPointCloud(const PointCloudType& _point_cloud, PointCloudType::Ptr& _trnasformed_point_cloud, const std::string& _target_frame);
 
     bool removeNans(PointCloudType::Ptr _point_cloud);
@@ -69,6 +72,7 @@ protected:
 
     // state
     bool first_tf_available_ = false;
+    tf2::TimePoint current_time_point_;
 
     // option
     struct {

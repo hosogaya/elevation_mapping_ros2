@@ -42,11 +42,8 @@ ElevationMapping::~ElevationMapping() {}
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
     RCLCPP_INFO(get_logger(), "callbackPointCloud called.");
-    PointCloudType::Ptr point_cloud(new PointCloudType);
-    pcl::fromROSMsg(*_point_cloud, *point_cloud);
-    RCLCPP_INFO(get_logger(), "Subscribed PointCloud is converted from msg to pcl PointCloudType");
     
-    last_point_cloud_update_time_ = rclcpp::Time(static_cast<uint64_t>(point_cloud->header.stamp*1000)); // microseconds -> nano secnods
+    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp);
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
@@ -73,7 +70,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     RCLCPP_INFO(get_logger(), "Processing point cloud.");
     PointCloudType::Ptr point_cloud_map_frame(new PointCloudType);
     Eigen::VectorXf height_variance;
-    if (!sensor_processor_->process(*point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
+    if (!sensor_processor_->process(_point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
     {
         if (!sensor_processor_->isFirstTfAvailable())
         {
@@ -99,7 +96,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     // add point cloud to elevation map
     RCLCPP_INFO(get_logger(), "Calling ElevationGridMap::add.");
-    if (!map_.add(point_cloud, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
+    if (!map_.add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
     {
         RCLCPP_ERROR(get_logger(), "Adding point cloud to elevation map failed");
         // reset map update timer

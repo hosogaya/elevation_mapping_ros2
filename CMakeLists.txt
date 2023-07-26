@@ -57,7 +57,7 @@ add_executable(${PROJECT_NAME}_node
   src/sensor_processing/SensorProcessorBase.cpp
   src/sensor_processing/PerfectSensorProcessor.cpp
 
-#   test/test_sensor_processor.cppsetRawGridMap
+  # test/test_sensor_processor.cpp
 # test/test_robot_motion_updater.cpp
 )
 

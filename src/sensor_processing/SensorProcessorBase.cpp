@@ -8,23 +8,28 @@ SensorProcessorBase::SensorProcessorBase(
     : kSensorFrameID_(_sensor_frame), kMapFrameID_(_map_frame), kRobotFrameID_(_robot_frame)
 {
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_, tf2::durationFromSec(10.0));
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);   
 }
 
 SensorProcessorBase::~SensorProcessorBase() {}
 
-bool SensorProcessorBase::process(const PointCloudType& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance,  PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance)
+bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance,  PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance)
 {
+    PointCloudType point_cloud;
+    pcl::fromROSMsg(*_point_cloud, point_cloud);
+    current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Subscribed PointCloud is converted from msg to pcl PointCloudType. Point: %d", point_cloud.points.size());
+
     /** listening transform from sensor frame to map frame*/
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Listing transformation");
-    rclcpp::Time time_stamp = rclcpp::Time(_point_cloud.header.stamp*1000); // mciro-sec to nano-sec
-    if (!updateTransformations(time_stamp)) return false;
+    // rclcpp::Time time_stamp = rclcpp::Time(_point_cloud.header.stamp*1000); // mciro-sec to nano-sec
+    if (!updateTransformations()) return false;
 
     // transform into sensor frame
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transfroming Point Cloud to sensor frame");
-    PointCloudType::Ptr point_cloud_sensor_frame;
-    if (!transformPointCloud(_point_cloud, point_cloud_sensor_frame, kSensorFrameID_)) return false;
+    PointCloudType::Ptr point_cloud_sensor_frame(new PointCloudType);
+    if (!transformPointCloud(point_cloud, point_cloud_sensor_frame, kSensorFrameID_)) return false;
 
     // remove Nans 
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Removing Nans from Point Cloud");
@@ -44,8 +49,8 @@ bool SensorProcessorBase::process(const PointCloudType& _point_cloud, const Eige
 
     // remove outside limits in map frame
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Removing Point Cloud out side limit");
-    std::vector<PointCloudType::Ptr> point_clouds{point_cloud_sensor_frame, _processed_point_cloud_map_frame};
-    if (!removeOutsideLimits(_processed_point_cloud_map_frame, point_clouds)) return false;
+    std::vector<PointCloudType::Ptr> point_cloud_list{point_cloud_sensor_frame, _processed_point_cloud_map_frame};
+    if (!removeOutsideLimits(_processed_point_cloud_map_frame, point_cloud_list)) return false;
 
     // compute variance 
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Compute height variance of each ponit");
@@ -54,23 +59,23 @@ bool SensorProcessorBase::process(const PointCloudType& _point_cloud, const Eige
     return true;
 }
 
-bool SensorProcessorBase::updateTransformations(const rclcpp::Time& _time_stamp)
+bool SensorProcessorBase::updateTransformations()
 {
     try {  
         // sensor to map
         RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Listening transformation from sensor frame to map frame");
-        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kSensorFrameID_, _time_stamp, tf2::durationFromSec(1.0));
+        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kSensorFrameID_, current_time_point_, tf2::durationFromSec(1.0));
         transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
         RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Listening transformation from robot frame to sensor frame");
-        transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, _time_stamp, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(1.0));
         Eigen::Affine3d transform;
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
         
         // map to base
-        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kMapFrameID_, _time_stamp, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(1.0));
         transform = tf2::transformToEigen(transformTF);
         rotation_map2base_ = transform.rotation().matrix();
         translation_map2base_ = transform.translation();
@@ -92,19 +97,20 @@ bool SensorProcessorBase::updateTransformations(const rclcpp::Time& _time_stamp)
 
 bool SensorProcessorBase::transformPointCloud(const PointCloudType& _point_cloud, PointCloudType::Ptr& _trnasformed_point_cloud, const std::string& _target_frame)
 {
-    rclcpp::Time time_stamp(_point_cloud.header.stamp*1000); // mciro-sec to nano-sec
     const std::string& input_frame = _point_cloud.header.frame_id;
     geometry_msgs::msg::TransformStamped transformTF;
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Listening transform from %s to %s.", input_frame.c_str(), _target_frame.c_str());
     try {
-        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, time_stamp, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, current_time_point_, tf2::durationFromSec(1.0));
     }
-    catch (tf2::TransformException& ex) {
+    catch (const tf2::TransformException& ex) {
         RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "%s", ex.what());
         return false;
     }
-    Eigen::Affine3d transform = tf2::transformToEigen(transformTF);
-    pcl::transformPointCloud(_point_cloud, *_trnasformed_point_cloud, transform.cast<float>(), true);
-    
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transforming geometry_msgs to Eigen::Affine3d");
+    Eigen::Affine3f transform = tf2::transformToEigen(transformTF).cast<float>();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transforming PointCloud from %s to %s", input_frame.c_str(), _target_frame.c_str());
+    pcl::transformPointCloud(_point_cloud, *_trnasformed_point_cloud, transform);
 
     return true;
 }

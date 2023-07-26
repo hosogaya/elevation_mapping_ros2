@@ -2,7 +2,7 @@
 
 int main()
 {
-    elevation_mapping::PerfectSensorProcessor processor("sensor", "map");
+    elevation_mapping::PerfectSensorProcessor processor("sensor", "map", "base_link");
 
     return 0;
 }
