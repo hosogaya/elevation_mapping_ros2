@@ -3,7 +3,7 @@
     # frame IDs
     map_frame: "map"
     robot_frame: "base_link"
-    sensor_frame: "sensor"
+    sensor_frame: "zedm_base_link"
     # pose update
     use_pose_update: false
     pose_cache_size: 10

@@ -33,6 +33,8 @@ def generate_launch_description():
         remappings=[("input/point_cloud", topic_name["input"]["point_cloud"]), 
                     ("input/pose", topic_name["input"]["pose_covariance"]), 
                     ("output/raw_map", topic_name["output"]["raw_map"])], 
+        arguments=['--ros-args', '--log-level', 'INFO'], 
+        output = 'screen'
     )
     return LaunchDescription([
         elevation_mapping_node,
