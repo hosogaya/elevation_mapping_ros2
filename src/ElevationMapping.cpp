@@ -184,7 +184,7 @@ bool ElevationMapping::readParameters()
     std::string sensor_type, sensor_frame, map_frame;
     sensor_frame = declare_parameter("sensor_frame", "/sensor");
     map_frame = declare_parameter("map_frame", "/map");
-    sensor_type = declare_parameter("sensor_processor_type", "perfect");
+    sensor_type = declare_parameter("sensor.type", "perfect");
     if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame);
     else 
     {

@@ -1,22 +1,38 @@
 /**:
   ros__parameters:
+    # frame IDs
     map_frame: "map"
     robot_frame: "base_link"
     sensor_frame: "sensor"
+    # pose update
     use_pose_update: false
     pose_cache_size: 10
-    sensor_processor_type: perfect
-    #  
-    min_normal_variance: 5.0
-    max_normal_variance: 100.0
-    min_horizontal_variance: 5.0
-    max_horizontal_variance: 100.0
-    mahalanobis_distance_thres: 10.0
-    scanning_duration: 0.5
-    increase_height_alpha: 0.5
-    multi_height_noise: 25.0
-    # 
-    use_voxel_filter: false
-    voxel_leaf_size: 5.0
-    pass_filter_lower_threshold: -100.0
-    pass_filter_upper_threshold: 100.0
+
+    # grid map
+    grid_map:
+      logger_name: "ElevationMap"
+      lateral_length: 3
+      longitudinal_length: 3
+      resolution: 0.1
+      initial_position_x: 0.0
+      initial_position_y: 0.0
+      min_normal_variance: 0.0001
+      min_normal_variance: 0.05
+      min_horizontal_variance: 0.0025
+      max_horizontal_variance: 0.5
+      mahalanobis_distance_thres: 2.5
+      multi_height_noise: 0.00009
+      scanning_duration: 0.5
+      increase_height_alpha: 0.1
+
+    # sensor processing
+    sensor:
+      logger_name: PerfectSensorProcessor
+      type: "perfect"
+      use_voxel_filter: false
+      voxel_leaf_size: 0.01
+      # pass_filter_lower_threshold: -100.0 # -infinity
+      pass_filter_upper_threshold: 0.4
+
+    robot_motion_updater:
+      logger_name: RobotMotionUpdater

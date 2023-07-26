@@ -53,6 +53,8 @@ public:
 
     void readParameters(rclcpp::Node* _node);
     
+    void setGeometry(const grid_map::Length& _length, const double& _resolution, const grid_map::Position& position);
+
     // getter
     const std::string& getFrameID() const;
     const rclcpp::Time getTimeOfLastUpdate() const;

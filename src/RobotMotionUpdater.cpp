@@ -150,7 +150,7 @@ Eigen::Matrix3d RobotMotionUpdater::computeSkewMatrixfromVector(const Eigen::Vec
 
 void RobotMotionUpdater::readParameters(rclcpp::Node* _node)
 {
-    logger_name_ = _node->declare_parameter("logger_name_RobotMotionUpdater", "RobotMotionUpdater");
+    logger_name_ = _node->declare_parameter("robot_motion_updater.logger_name", "RobotMotionUpdater");
 }
 
 

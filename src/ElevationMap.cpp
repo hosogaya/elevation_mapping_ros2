@@ -437,6 +437,14 @@ void ElevationMap::move(const grid_map::Position& position)
     }
 }
 
+void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _resolution, const grid_map::Position& _position)
+{
+    raw_map_.setGeometry(_length, _resolution, _position);
+    fused_map_.setGeometry(_length, _resolution, _position);
+    RCLCPP_DEBUG_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
+        << " \n Resolution is " << raw_map_.getResolution() << ".\nLateral length " << raw_map_.getLength()(0) << ". Longitudinal length" << raw_map_.getLength()(1) << ".");
+}
+
 const std::string& ElevationMap::getFrameID() const
 {
     return raw_map_.getFrameId();
@@ -463,15 +471,22 @@ float ElevationMap::cumulativeDistributionFunction(float x, float mean, float st
 
 void ElevationMap::readParameters(rclcpp::Node* _node)
 {
-    min_normal_variance_ = _node->declare_parameter("min_normal_variance", 5.0);
-    max_normal_variance_ = _node->declare_parameter("max_normal_variance", 100.0);
-    min_horizontal_variance_ = _node->declare_parameter("min_horizontal_variance", 5.0);
-    max_horizontal_variance_ =_node->declare_parameter("max_horizontal_variance", 100.0);
-    mahalanobis_distance_thres_ = _node->declare_parameter("mahalanobis_distance_thres", 10.0);
-    scanning_duration_ = rclcpp::Time(static_cast<uint64_t>(_node->declare_parameter("scanning_duration", 0.1))*1e9); // seconds -> nanosec
-    increase_height_alpha_ = _node->declare_parameter("increase_height_alpha", 0.5);
-    multi_height_noise_ = _node->declare_parameter("multi_height_noise", 25.0);    
-    logger_name_ = _node->declare_parameter("logger_name_ElevationMap", "ElevationMap");
+    double lateral_length = _node->declare_parameter("grid_map.lateral_length", 5);
+    double longitudinal_length = _node->declare_parameter("grid_map.longitudinal_length", 5);
+    double resolution = _node->declare_parameter("grid_map.resolution", 0.05);
+    double position_x = _node->declare_parameter("grid_map.initial_position_x", 0.0);
+    double position_y = _node->declare_parameter("grid_map.initial_position_y", 0.0);
+    setGeometry(grid_map::Length(lateral_length, longitudinal_length), resolution, grid_map::Position(position_x, position_y)); // initialize
+    
+    min_normal_variance_ = _node->declare_parameter("grid_map.min_normal_variance", std::pow(0.003, 2.0));
+    max_normal_variance_ = _node->declare_parameter("grid_map.max_normal_variance", std::pow(0.03, 2.0));
+    min_horizontal_variance_ = _node->declare_parameter("grid_map.min_horizontal_variance", std::pow(resolution/2.0, 2.0));
+    max_horizontal_variance_ =_node->declare_parameter("grid_map.max_horizontal_variance", 0.5);
+    mahalanobis_distance_thres_ = _node->declare_parameter("grid_map.mahalanobis_distance_thres", 2.5);
+    scanning_duration_ = rclcpp::Time(static_cast<uint64_t>(_node->declare_parameter("grid_map.scanning_duration", 1.0))*1e9); // seconds -> nanosec
+    increase_height_alpha_ = _node->declare_parameter("grid_map.increase_height_alpha", 0.0);
+    multi_height_noise_ = _node->declare_parameter("grid_map.multi_height_noise", std::pow(0.003, 2.0));    
+    logger_name_ = _node->declare_parameter("grid_map.logger_name", "ElevationMap");
 }
 
 }
