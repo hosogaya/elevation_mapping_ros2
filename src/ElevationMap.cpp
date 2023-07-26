@@ -135,7 +135,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
     const rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
 
     return true;
 }
@@ -280,7 +280,7 @@ bool ElevationMap::fuse(const grid_map::Index& _top_left_index, const grid_map::
 
     fused_map_.setTimestamp(copy_raw_map.getTimestamp());
     const rclcpp::Duration duration(system_clock_->now()-method_start_time);
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevation map has been fused in %f s", duration.seconds());
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Elevation map has been fused in %f s", duration.seconds());
 
     return true;
 } // end of fuse
@@ -373,7 +373,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
     } // end of remove position
 
     rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
@@ -429,7 +429,7 @@ void ElevationMap::move(const grid_map::Position& position)
     std::vector<grid_map::BufferRegion> new_region;
     if (raw_map_.move(position, new_region))
     {
-        RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
+        RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
 
         // "dynamic time" layer is meant to be interpreted as integer values, therefore nan:s need to be zero.
         grid_map::Matrix& dynamic_time{raw_map_.get("dynamic_time")};
@@ -441,7 +441,7 @@ void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _r
 {
     raw_map_.setGeometry(_length, _resolution, _position);
     fused_map_.setGeometry(_length, _resolution, _position);
-    RCLCPP_DEBUG_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
+    RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
         << " \n Resolution is " << raw_map_.getResolution() << ".\nLateral length " << raw_map_.getLength()(0) << ". Longitudinal length" << raw_map_.getLength()(1) << ".");
 }
 
@@ -471,6 +471,7 @@ float ElevationMap::cumulativeDistributionFunction(float x, float mean, float st
 
 void ElevationMap::readParameters(rclcpp::Node* _node)
 {
+    logger_name_ = _node->declare_parameter("grid_map.logger_name", "ElevationMap");
     double lateral_length = _node->declare_parameter("grid_map.lateral_length", 5);
     double longitudinal_length = _node->declare_parameter("grid_map.longitudinal_length", 5);
     double resolution = _node->declare_parameter("grid_map.resolution", 0.05);
@@ -486,7 +487,6 @@ void ElevationMap::readParameters(rclcpp::Node* _node)
     scanning_duration_ = rclcpp::Time(static_cast<uint64_t>(_node->declare_parameter("grid_map.scanning_duration", 1.0))*1e9); // seconds -> nanosec
     increase_height_alpha_ = _node->declare_parameter("grid_map.increase_height_alpha", 0.0);
     multi_height_noise_ = _node->declare_parameter("grid_map.multi_height_noise", std::pow(0.003, 2.0));    
-    logger_name_ = _node->declare_parameter("grid_map.logger_name", "ElevationMap");
 }
 
 }

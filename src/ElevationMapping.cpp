@@ -5,7 +5,8 @@ namespace elevation_mapping {
 using std::placeholders::_1;
 
 ElevationMapping::ElevationMapping() 
-    : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
+    // : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
+    : rclcpp::Node("elevation_mapping")
 {
     readParameters();
     // create tf listener
@@ -23,10 +24,15 @@ ElevationMapping::ElevationMapping()
 
     if (use_pose_update_)
     {
+        RCLCPP_INFO(get_logger(), "Updation by pose message is enabled");
         // std::string input_pose_topic = declare_parameter("input.pose_covariance");
         sub_pose_.subscribe(this, "input/pose");
         pose_cache_.connectInput(sub_pose_);
         pose_cache_.setCacheSize(pose_cache_size_);
+    }
+    else 
+    {
+        RCLCPP_INFO(get_logger(), "Updation by pose message is disable");
     }
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
@@ -35,8 +41,10 @@ ElevationMapping::~ElevationMapping() {}
 
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
-    PointCloudType::Ptr point_cloud;
+    RCLCPP_INFO(get_logger(), "callbackPointCloud called.");
+    PointCloudType::Ptr point_cloud(new PointCloudType);
     pcl::fromROSMsg(*_point_cloud, *point_cloud);
+    RCLCPP_INFO(get_logger(), "Subscribed PointCloud is converted from msg to pcl PointCloudType");
     
     last_point_cloud_update_time_ = rclcpp::Time(static_cast<uint64_t>(point_cloud->header.stamp*1000)); // microseconds -> nano secnods
 
@@ -44,6 +52,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     robot_pose_covariance.setZero();
     if (use_pose_update_)
     {
+        RCLCPP_INFO(get_logger(), "Listening pose covariance message");
         std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped const> pose_msg = pose_cache_.getElemBeforeTime(last_point_cloud_update_time_);
         if (!pose_msg) 
         {
@@ -61,6 +70,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
 
     // process point cloud
+    RCLCPP_INFO(get_logger(), "Processing point cloud.");
     PointCloudType::Ptr point_cloud_map_frame(new PointCloudType);
     Eigen::VectorXf height_variance;
     if (!sensor_processor_->process(*point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
@@ -77,8 +87,10 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         }
     }
 
+    RCLCPP_INFO(get_logger(), "Calling updateMapLocation.");
     updateMapLocation();
 
+    RCLCPP_INFO(get_logger(), "Calling updatePrediction.");
     if (!updatePrediction(last_point_cloud_update_time_))
     {
         RCLCPP_ERROR(get_logger(), "Updating process noise failed");
@@ -86,6 +98,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
 
     // add point cloud to elevation map
+    RCLCPP_INFO(get_logger(), "Calling ElevationGridMap::add.");
     if (!map_.add(point_cloud, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
     {
         RCLCPP_ERROR(get_logger(), "Adding point cloud to elevation map failed");
@@ -96,7 +109,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // fuse previous map and current map
     // map_.visibilityCleanup();
     // map_.fuseAll();
-
+    RCLCPP_INFO(get_logger(), "Publishing raw map as grid_map_msg::msg::GridMap.");
     grid_map_msgs::msg::GridMap::UniquePtr message;
     message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap());
     pub_raw_map_->publish(std::move(message));
@@ -104,7 +117,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
 bool ElevationMapping::updateMapLocation()
 {
-    RCLCPP_DEBUG(this->get_logger(), "Elevation map is checked for relocalization");
+    RCLCPP_INFO(this->get_logger(), "Elevation map is checked for relocalization");
 
     geometry_msgs::msg::TransformStamped track_point;
     track_point.header.frame_id = track_point_frame_id_;
@@ -143,7 +156,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     }
     else if (_time_stamp < map_.getTimeOfLastUpdate())
     {
-        RCLCPP_DEBUG(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
+        RCLCPP_INFO(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return true;
     }
 
@@ -181,11 +194,12 @@ bool ElevationMapping::readParameters()
     time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
-    std::string sensor_type, sensor_frame, map_frame;
+    std::string sensor_type, sensor_frame, map_frame, robot_frame;
     sensor_frame = declare_parameter("sensor_frame", "/sensor");
     map_frame = declare_parameter("map_frame", "/map");
+    robot_frame = track_point_frame_id_;
     sensor_type = declare_parameter("sensor.type", "perfect");
-    if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame);
+    if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, robot_frame);
     else 
     {
         RCLCPP_ERROR(get_logger(), "The sensor type %s is invailed", sensor_type.c_str());
