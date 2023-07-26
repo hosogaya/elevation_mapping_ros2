@@ -4,8 +4,8 @@ namespace elevation_mapping
 {
 
 ElevationMap::ElevationMap()
-    : raw_map_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_varizance_xy", 
-        "color", "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensory_at_lowest_scan", "sensor_z_at_lowest_scan"}), 
+    : raw_map_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", 
+        "color", "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}), 
       fused_map_({"elevation", "upper_bound", "lower_bound", "color"})
 {
     raw_map_.setBasicLayers({"elevation", "variance"});
@@ -21,12 +21,10 @@ ElevationMap::~ElevationMap() {}
 bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time_stamp, const Eigen::Affine3d& _transform_sensor2map_)
 {
     const rclcpp::Time method_start_time = system_clock_->now(); // @todo convert to wall clock
-    std::stringstream ss;
     for (const std::string& layer: raw_map_.getLayers())
     {
-        ss << layer << ", ";
+        RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Raw map layers: " << layer.c_str());
     }
-    RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Raw map layers: " << ss.str());
     // update initial time if it is not initiallized.
     if (initial_time_.seconds() == 0)
     {
@@ -302,7 +300,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
     raw_map_.clear("lowest_scan_point");
     raw_map_.clear("sensor_x_at_lowest_scan");
     raw_map_.clear("sensor_y_at_lowest_scan");
-    raw_map_.clear("sensor_xy_at_lowest_scan");
+    raw_map_.clear("sensor_z_at_lowest_scan");
 
     visibility_clean_up_map_.add("max_height");
     
