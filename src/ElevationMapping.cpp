@@ -7,6 +7,7 @@ using std::placeholders::_1;
 ElevationMapping::ElevationMapping() 
     : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
 {
+    readParameters();
     // create tf listener
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -22,6 +23,7 @@ ElevationMapping::ElevationMapping()
 
     if (use_pose_update_)
     {
+        // std::string input_pose_topic = declare_parameter("input.pose_covariance");
         sub_pose_.subscribe(this, "input/pose");
         pose_cache_.connectInput(sub_pose_);
         pose_cache_.setCacheSize(pose_cache_size_);
@@ -133,6 +135,7 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 {
+    if (!use_pose_update_) return true;
     if (time_tolerance_prediction_ + _time_stamp.seconds() < map_.getTimeOfLastUpdate().seconds())
     {
         RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
@@ -189,7 +192,7 @@ bool ElevationMapping::readParameters()
         return false;
     }
 
-    map_.readParameter(this);
+    map_.readParameters(this);
     sensor_processor_->readParameters(this);
 
 
