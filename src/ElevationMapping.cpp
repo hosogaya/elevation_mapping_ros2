@@ -174,7 +174,7 @@ bool ElevationMapping::readParameters()
     // elevation mapping
     use_pose_update_ = declare_parameter("use_pose_update", true);
     pose_cache_size_ = declare_parameter("pose_cache_size", 10);
-    track_point_frame_id_ = declare_parameter("track_point_frame_id", "/base_link");
+    track_point_frame_id_ = declare_parameter("robot_frame", "/base_link");
     time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
