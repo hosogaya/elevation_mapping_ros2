@@ -31,14 +31,13 @@ namespace elevation_mapping
 class SensorProcessorBase
 {
 public: 
-    SensorProcessorBase(const std::string sensor_frame, const std::string map_frame, 
-                        const rclcpp::Logger _logger);
+    SensorProcessorBase(const std::string& sensor_frame, const std::string& map_frame);
     ~SensorProcessorBase();
 
     bool process(const PointCloudType& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
     bool isFirstTfAvailable() const {return first_tf_available_;}
     const Eigen::Affine3d& getTransformSensor2Map() {return transform_sensor2map_;}
-    virtual void readParameters(rclcpp::Node* _node);
+    virtual void readParameters(rclcpp::Node* _node) = 0;
 protected:
     bool updateTransformations(const rclcpp::Time& time_stamp);
     bool transformPointCloud(const PointCloudType& _point_cloud, PointCloudType::Ptr& _trnasformed_point_cloud, const std::string& _target_frame);
@@ -46,16 +45,16 @@ protected:
     bool removeNans(PointCloudType::Ptr _point_cloud);
     bool reducePoint(PointCloudType::Ptr _point_cloud);
     bool removeOutsideLimits(const PointCloudType::Ptr& _reference, std::vector<PointCloudType::Ptr>& _point_clouds);
-    virtual bool filterSensorType(PointCloudType::Ptr _point_cloud);
+    virtual bool filterSensorType(PointCloudType::Ptr _point_cloud) = 0;
 
-    virtual bool computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) = 0;
+    virtual void computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) = 0;
 
     Eigen::Matrix3f computeSkewMatrixfromVector(const Eigen::Vector3f& _vec);
 
     std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     rclcpp::Clock::SharedPtr clock_;
-    rclcpp::Logger logger_;
+    // rclcpp::Logger logger_;
 
     const std::string kSensorFrameID_;
     const std::string kBaseLinkID_;

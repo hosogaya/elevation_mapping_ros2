@@ -57,14 +57,9 @@ private:
     void callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud);
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_point_cloud_;
 
-    rclcpp::TimerBase::SharedPtr timer_;
-    void callbackTimer();
-    void resetTimer();
-
     // update
     bool updateMapLocation();
     bool updatePrediction(const rclcpp::Time& _time_stamp);
-
 
     // initialize
     bool readParameters();
@@ -88,7 +83,7 @@ private:
 
     std::string track_point_frame_id_ = "base_link"; // /robot
 
-    rclcpp::Time time_tolerance_prediction_;
+    double time_tolerance_prediction_; // seconds
     // float max_no_update_duration_;
 };
 

@@ -8,13 +8,13 @@ namespace elevation_mapping
 class PerfectSensorProcessor : public SensorProcessorBase
 {
 public: 
-    explicit PerfectSensorProcessor(const std::string sensor_frame, const std::string map_frame, 
-                const rclcpp::Logger _logger);
+    explicit PerfectSensorProcessor(const std::string sensor_frame, const std::string map_frame);
 
     ~PerfectSensorProcessor();
     void readParameters(rclcpp::Node* _node) override;
 private:
-    bool computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
+    bool filterSensorType(PointCloudType::Ptr _point_cloud) override;
+    void computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
 };  
 
 }

@@ -4,9 +4,9 @@ namespace elevation_mapping {
 
 using std::placeholders::_1;
 
-ElevationMapping::ElevationMapping() : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
+ElevationMapping::ElevationMapping() 
+    : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
 {
-
     // create tf listener
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -21,7 +21,7 @@ ElevationMapping::ElevationMapping() : rclcpp::Node("elevation_mapping", rclcpp:
     );  
 
     if (use_pose_update_)
-    {`
+    {
         sub_pose_.subscribe(this, "input/pose");
         pose_cache_.connectInput(sub_pose_);
         pose_cache_.setCacheSize(pose_cache_size_);
@@ -29,12 +29,14 @@ ElevationMapping::ElevationMapping() : rclcpp::Node("elevation_mapping", rclcpp:
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
 
+ElevationMapping::~ElevationMapping() {}
+
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
     PointCloudType::Ptr point_cloud;
     pcl::fromROSMsg(*_point_cloud, *point_cloud);
     
-    last_point_cloud_update_time_(point_cloud->header.stamp*1000);
+    last_point_cloud_update_time_ = rclcpp::Time(static_cast<uint64_t>(point_cloud->header.stamp*1000)); // microseconds -> nano secnods
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
@@ -95,7 +97,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     grid_map_msgs::msg::GridMap::UniquePtr message;
     message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap());
-    pub_raw_map_->publish(message);
+    pub_raw_map_->publish(std::move(message));
 }
 
 bool ElevationMapping::updateMapLocation()
@@ -104,7 +106,8 @@ bool ElevationMapping::updateMapLocation()
 
     geometry_msgs::msg::TransformStamped track_point;
     track_point.header.frame_id = track_point_frame_id_;
-    track_point.header.stamp = rclcpp::Time(0);
+    track_point.header.stamp.sec = rclcpp::Time(0).seconds();
+    track_point.header.stamp.nanosec = rclcpp::Time(0).nanoseconds();
     track_point.transform.translation.x = 0.0;
     track_point.transform.translation.y = 0.0;
     track_point.transform.translation.z = 0.0;
@@ -113,7 +116,8 @@ bool ElevationMapping::updateMapLocation()
     try
     {
         // get transformed track point (map to track point)
-        transformed_track_point = tf_buffer_->transform(track_point, map_.getFrameID(), rclcpp::Duration(1.0));
+        // transformed_track_point = tf_buffer_->transform(track_point, map_.getFrameID(), tf2::durationFromSec(1.0));
+        transformed_track_point = tf_buffer_->lookupTransform(track_point_frame_id_, map_.getFrameID(), tf2::TimePointZero);
     }
     catch(const tf2::TransformException& e)
     {
@@ -129,7 +133,7 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 {
-    if (_time_stamp + time_tolerance_prediction_ < map_.getTimeOfLastUpdate())
+    if (time_tolerance_prediction_ + _time_stamp.seconds() < map_.getTimeOfLastUpdate().seconds())
     {
         RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return false;
@@ -155,9 +159,9 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
         }
         return false;
     }
-    Eigen::Matrix<double, 6, 6> pose_covariance = Eigen::Map<const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>(pose_msg->pose.covariance.data(), 6, 6);
+    Eigen::Matrix<double, 6, 6> pose_covariance = Eigen::Map<const Eigen::MatrixXd>(pose_msg->pose.covariance.data(), 6, 6);
     Eigen::Affine3d transform;
-    tf2::fromMsg(pose_msg, transform);
+    tf2::fromMsg(pose_msg->pose.pose, transform);
     
     // compute map variacne update from motion prediction
     robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp);
@@ -171,15 +175,14 @@ bool ElevationMapping::readParameters()
     use_pose_update_ = declare_parameter("use_pose_update", true);
     pose_cache_size_ = declare_parameter("pose_cache_size", 10);
     track_point_frame_id_ = declare_parameter("track_point_frame_id", "/base_link");
-    float time_tolerance = declare_parameter("time_tolerance_prediction", 100);
-    time_tolerance_prediction_(time_tolerance*1.0e6f); // milli seconds -> nano seconds
+    time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
     std::string sensor_type, sensor_frame, map_frame;
     sensor_frame = declare_parameter("sensor_frame", "/sensor");
-    map_frame = declare_parameter("map_frame", "/map")
+    map_frame = declare_parameter("map_frame", "/map");
     sensor_type = declare_parameter("sensor_processor_type", "perfect");
-    if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, this->get_logger());
+    if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame);
     else 
     {
         RCLCPP_ERROR(get_logger(), "The sensor type %s is invailed", sensor_type.c_str());

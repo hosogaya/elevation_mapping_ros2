@@ -38,7 +38,7 @@ struct VarianceClampOperator
 class ElevationMap
 {
 public:
-    explicit ElevationMap(const rclcpp::Node* _node);
+    explicit ElevationMap();
     ~ElevationMap();
 
     bool add (PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time, const Eigen::Affine3d& _transform_sensor2map_);
@@ -55,7 +55,7 @@ public:
     
     // getter
     const std::string& getFrameID() const;
-    const rclcpp::Time& getTimeOfLastUpdate() const;
+    const rclcpp::Time getTimeOfLastUpdate() const;
     GridMap& getRawMap();
     GridMap& getFusedMap();
 private:
@@ -64,8 +64,9 @@ private:
 
     std::shared_ptr<rclcpp::Clock> system_clock_;
     std::shared_ptr<rclcpp::Clock> ros_clock_;
-    rclcpp::Logger logger_;
     rclcpp::Time last_update_time_;
+    rclcpp::Time initial_time_;
+    rclcpp::Time scanning_duration_;
 
     GridMap raw_map_; //
     GridMap fused_map_; // update data by using covariance of map position
@@ -75,7 +76,6 @@ private:
     float min_normal_variance_, max_normal_variance_;
     float min_horizontal_variance_, max_horizontal_variance_;
     float mahalanobis_distance_thres_;
-    rclcpp::Time scanning_duration_;
     float increase_height_alpha_; // (0, 1)
     float multi_height_noise_;
 };

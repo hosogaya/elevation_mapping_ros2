@@ -4,16 +4,21 @@
 namespace elevation_mapping
 {
 PerfectSensorProcessor::PerfectSensorProcessor(
-    const std::string _sensor_frame, const std::string _map_frame, 
-    const rclcpp::Logger _logger)
-    : SensorProcessorBase(_sensor_frame, _map_frame, _logger)
+    const std::string _sensor_frame, const std::string _map_frame)
+    : SensorProcessorBase(_sensor_frame, _map_frame)
 {
 
 }
 
 PerfectSensorProcessor::~PerfectSensorProcessor() {}
 
-bool PerfectSensorProcessor::computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance)
+bool PerfectSensorProcessor::filterSensorType(PointCloudType::Ptr _point_cloud)
+{
+
+    return true;
+}
+
+void PerfectSensorProcessor::computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance)
 {
     _variance.resize(_point_cloud->size());
 
@@ -58,10 +63,10 @@ bool PerfectSensorProcessor::computeVariance(PointCloudType::Ptr _point_cloud, c
 
 void PerfectSensorProcessor::readParameters(rclcpp::Node* _node)
 {
-    _node->declare_parameter("use_voxel_filter", param_voxel_grid_fitler_.use_filter, true);
-    _node->declare_parameter("voxel_leaf_size", param_voxel_grid_fitler_.leaf_size, 5.0);
-    _node->declare_parameter("pass_filter_lower_threshold", param_pass_through_filter_.lower_threshold_, -std::numeric_limits<double>::infinity());
-    _node->declare_parameter("pass_filter_upper_threshold", param_pass_through_filter_.upper_threshold_, std::numeric_limits<double>::infinity());
+    param_voxel_grid_fitler_.use_filter = _node->declare_parameter("use_voxel_filter", true);
+    param_voxel_grid_fitler_.leaf_size = _node->declare_parameter("voxel_leaf_size", 5.0);
+    param_pass_through_filter_.lower_threshold_ = _node->declare_parameter("pass_filter_lower_threshold", -std::numeric_limits<double>::infinity());
+    param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
 }
 
 }

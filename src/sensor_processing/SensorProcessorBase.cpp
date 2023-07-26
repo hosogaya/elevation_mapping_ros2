@@ -4,12 +4,10 @@ namespace elevation_mapping
 {
 
 SensorProcessorBase::SensorProcessorBase(
-    const std::string _sensor_frame, const std::string _map_frame, 
-    const rclcpp::Logger _logger)
+    const std::string& _sensor_frame, const std::string& _map_frame)
     : kSensorFrameID_(_sensor_frame), kMapFrameID_(_map_frame)
 {
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-    logger_ = _logger;
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);   
 }
@@ -19,53 +17,52 @@ SensorProcessorBase::~SensorProcessorBase() {}
 bool SensorProcessorBase::process(const PointCloudType& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance,  PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance)
 {
     /** listening transform from sensor frame to map frame*/
-    rclcpp::Time time_stamp(_point_cloud.header.stamp*1000); // mciro-sec to nano-sec
+    rclcpp::Time time_stamp = rclcpp::Time(_point_cloud.header.stamp*1000); // mciro-sec to nano-sec
     if (!updateTransformations(time_stamp)) return false;
 
     // transform into sensor frame
     PointCloudType::Ptr point_cloud_sensor_frame;
-    transformPointCloud(_point_cloud, point_cloud_sensor_frame, kSensorFrameID_);
+    if (!transformPointCloud(_point_cloud, point_cloud_sensor_frame, kSensorFrameID_)) return false;
 
     // remove Nans 
-    removeNans(point_cloud_sensor_frame);
+    if (!removeNans(point_cloud_sensor_frame)) return false;
 
     // reduce points using voxel grid filter
-    reducePoint(point_cloud_sensor_frame);
+    if (!reducePoint(point_cloud_sensor_frame)) return false;
 
     // specific filtering per sensor type
-    filterSensorType(point_cloud_sensor_frame);
+    if (!filterSensorType(point_cloud_sensor_frame)) return false;
 
     // transform into map frame
-    if (!transformPointCloud(*point_cloud_sensor_frame, _processed_point_cloud_map_frame, kMapFrameID_))
-    {
-        return false;
-    }
+    if (!transformPointCloud(*point_cloud_sensor_frame, _processed_point_cloud_map_frame, kMapFrameID_)) return false;
 
     // remove outside limits in map frame
     std::vector<PointCloudType::Ptr> point_clouds{point_cloud_sensor_frame, _processed_point_cloud_map_frame};
-    removeOutsideLimits(_processed_point_cloud_map_frame, point_clouds);
+    if (!removeOutsideLimits(_processed_point_cloud_map_frame, point_clouds)) return false;
 
     // compute variance 
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);
+
+    return true;
 }
 
 bool SensorProcessorBase::updateTransformations(const rclcpp::Time& _time_stamp)
 {
-    try {
+    try {  
+
         // sensor to map
-        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, _time_stamp, rclcpp::Duration(1.0));
-        tf2::fromMsg(transformTF, transform_sensor2map_);
+        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, _time_stamp, tf2::durationFromSec(1.0));
+        transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
-        transformTF = tf_buffer_->lookupTransform(kBaseLinkID_, kSensorFrameID_, _time_stamp, rclcpp::Duration(1.0));
+        transformTF = tf_buffer_->lookupTransform(kBaseLinkID_, kSensorFrameID_, _time_stamp, tf2::durationFromSec(1.0));
         Eigen::Affine3d transform;
-        tf2::fromMsg(transformTF, transform);
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
         
         // map to base
-        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kBaseLinkID_, _time_stamp, rclcpp::Duration(1.0));
-        tf2::fromMsg(transformTF, transform);
+        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kBaseLinkID_, _time_stamp, tf2::durationFromSec(1.0));
+        transform = tf2::transformToEigen(transformTF);
         rotation_map2base_ = transform.rotation().matrix();
         translation_map2base_ = transform.translation();
 
@@ -87,14 +84,13 @@ bool SensorProcessorBase::transformPointCloud(const PointCloudType& _point_cloud
     const std::string& input_frame = _point_cloud.header.frame_id;
     geometry_msgs::msg::TransformStamped transformTF;
     try {
-        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, time_stamp, rclcpp::Duration(1.0));
+        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, time_stamp, tf2::durationFromSec(1.0));
     }
     catch (tf2::TransformException& ex) {
-        RCLCPP_ERROR(logger_, "%s", ex.what());
+        // RCLCPP_ERROR(logger_, "%s", ex.what());
         return false;
     }
-    Eigen::Affine3d transform;
-    tf2::fromMsg(transformTF, transform);
+    Eigen::Affine3d transform = tf2::transformToEigen(transformTF);
     pcl::transformPointCloud(_point_cloud, *_trnasformed_point_cloud, transform.cast<float>(), true);
     
 
@@ -133,10 +129,10 @@ bool SensorProcessorBase::removeOutsideLimits(const PointCloudType::Ptr& _refere
 {
     if (!std::isfinite(param_pass_through_filter_.lower_threshold_) && !std::isfinite(param_pass_through_filter_.upper_threshold_))
     {
-        RCLCPP_DEBUG(logger_, "pass through filter is not applied");
+        // RCLCPP_DEBUG(logger_, "pass through filter is not applied");
         return true;
     }
-    RCLCPP_DEBUG(logger_, "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base", param_pass_through_filter_.lower_threshold_, param_pass_through_filter_.upper_threshold_);
+    // RCLCPP_DEBUG(logger_, "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base", param_pass_through_filter_.lower_threshold_, param_pass_through_filter_.upper_threshold_);
 
     pcl::PassThrough<PointType> pass_through_filter(true);
     pass_through_filter.setInputCloud(_reference);
@@ -156,7 +152,7 @@ bool SensorProcessorBase::removeOutsideLimits(const PointCloudType::Ptr& _refere
         extract_indices_filter.filter(temp_point_cloud);
         point_cloud->points.swap(temp_point_cloud.points);
     }
-    RCLCPP_DEBUG(logger_, "Remove point out side limits. Reduced point cloud to %ld points", (_point_clouds[0]->size()));
+    // RCLCPP_DEBUG(logger_, "Remove point out side limits. Reduced point cloud to %ld points", (_point_clouds[0]->size()));
     return true;
 }
 
@@ -170,6 +166,8 @@ Eigen::Matrix3f SensorProcessorBase::computeSkewMatrixfromVector(const Eigen::Ve
     mat(1, 2) =-_vec.x();
     mat(2, 0) =-_vec.y();
     mat(2, 1) = _vec.z();
+
+    return mat;
 }
 
 
