@@ -90,25 +90,28 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
             continue;
         }
 
-        const double mahalanobis_distance = std::fabs(point.z - elevation)/std::sqrt(variance);
-        if (mahalanobis_distance > mahalanobis_distance_thres_)
-        {
-            if (scan_time_since_initialization.seconds() - time <= scanning_duration_.seconds() && elevation > point.z)
+        
+        if (variance > 0.0) {
+            const double mahalanobis_distance = std::fabs(point.z - elevation)/std::sqrt(variance);
+            if (mahalanobis_distance > mahalanobis_distance_thres_)
             {
-                // Ignore point if measurement is from the same point cloud (time comparison) and 
-                // if measurement is lower than the elevation in the map
-            }
-            else if (scan_time_since_initialization.seconds() - time <= scanning_duration_.seconds())
-            {
-                elevation = increase_height_alpha_*elevation + (1.0-increase_height_alpha_)*point.z;
-                variance = increase_height_alpha_*variance + (1.0-increase_height_alpha_)+point_variance;
-            }
-            else 
-            {
-                variance += multi_height_noise_; // fast adaptation to changing terrain
-            }
-            continue;
-        }   
+                if (scan_time_since_initialization.seconds() - time <= scanning_duration_.seconds() && elevation > point.z)
+                {
+                    // Ignore point if measurement is from the same point cloud (time comparison) and 
+                    // if measurement is lower than the elevation in the map
+                }
+                else if (scan_time_since_initialization.seconds() - time <= scanning_duration_.seconds())
+                {
+                    elevation = increase_height_alpha_*elevation + (1.0-increase_height_alpha_)*point.z;
+                    variance = increase_height_alpha_*variance + (1.0-increase_height_alpha_)+point_variance;
+                }
+                else 
+                {
+                    variance += multi_height_noise_; // fast adaptation to changing terrain
+                }
+                continue;
+            } 
+        }
 
         // store lowest points from scan for visibility checking 
         const float point_height_plus_uncertainty = point.z + 3.0*std::sqrt(point_variance); // 3*sigma (99% confidence interval)
@@ -120,9 +123,14 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
             sensor_y_at_lowest_scan = sensor_translation.y();
             sensor_z_at_lowest_scan = sensor_translation.z();
         }
-        elevation = (variance*point.z + point_variance*elevation) / (point_variance + variance);
-        variance = (point_variance*variance) / (point_variance + variance);
-        // @todo add color fusion
+        if (point_variance == 0.0) {
+            elevation = point.z;
+        }
+        else {
+            elevation = (variance*point.z + point_variance*elevation) / (point_variance + variance);
+            variance = (point_variance*variance) / (point_variance + variance);
+        }
+
         grid_map::colorVectorToValue(point.getRGBVector3i(), color);
         time = scan_time_since_initialization.seconds();
         dynaic_time = current_time.seconds();
