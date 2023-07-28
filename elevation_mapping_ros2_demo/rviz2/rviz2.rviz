@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /PointCloud21
+        - /GridMap1
       Splitter Ratio: 0.5
     Tree Height: 617
   - Class: rviz_common/Selection
@@ -72,9 +73,57 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /pcd
+        Value: /zedm/zed_node/point_cloud/cloud_registered
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: elevation
+      Color Transformer: GridMapLayer
+      Enabled: true
+      Height Layer: elevation
+      Height Transformer: GridMapLayer
+      History Length: 2
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: GridMap
+      Show Grid Lines: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /raw_elevation_map
+      Use Rainbow: true
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        base_link:
+          Value: true
+        map:
+          Value: true
+        zedm_base_link:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Tree:
+        map:
+          base_link:
+            zedm_base_link:
+              {}
+      Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
@@ -119,25 +168,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 23.827362060546875
+      Distance: 19.877979278564453
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
+        X: 3.5429680347442627
+        Y: 7.649673938751221
         Z: 0
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.27539801597595215
+      Pitch: 1.024796724319458
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 0.9203978776931763
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 4.4373860359191895
     Saved:
       - Class: rviz_default_plugins/Orbit
         Distance: 23.827362060546875
@@ -173,5 +222,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 72
-  Y: 60
+  X: 575
+  Y: 124
