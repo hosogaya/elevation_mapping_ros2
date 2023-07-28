@@ -7,13 +7,15 @@
     # pose update
     use_pose_update: false
     pose_cache_size: 10
+    # visibility clean up
+    use_visibility_clean_up: false
 
     # grid map
     grid_map:
       logger_name: "ElevationMap"
-      lateral_length: 3
-      longitudinal_length: 3
-      resolution: 0.1
+      lateral_length: 10.0
+      longitudinal_length: 10.0
+      resolution: 0.05
       initial_position_x: 0.0
       initial_position_y: 0.0
       min_normal_variance: 0.0001
@@ -32,7 +34,7 @@
       use_voxel_filter: false
       voxel_leaf_size: 0.01
       # pass_filter_lower_threshold: -100.0 # -infinity
-      pass_filter_upper_threshold: 0.4
+      # pass_filter_upper_threshold: 0.4
 
     robot_motion_updater:
       logger_name: RobotMotionUpdater

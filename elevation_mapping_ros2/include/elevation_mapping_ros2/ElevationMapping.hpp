@@ -51,6 +51,7 @@ private:
     message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> sub_pose_;
     message_filters::Cache<geometry_msgs::msg::PoseWithCovarianceStamped> pose_cache_;
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_raw_map_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_point_cloud_;
     // message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime
     //     <sensor_msgs::msg::PointCloud2, geometry_msgs::msg::PoseWithCovarianceStamped>> sync_sub_;
     
@@ -80,6 +81,7 @@ private:
     // parameters
     bool use_pose_update_ = true;
     size_t pose_cache_size_ = 10;
+    bool use_visibility_clean_up_ = true;
 
     std::string track_point_frame_id_ = "base_link"; // /robot
 

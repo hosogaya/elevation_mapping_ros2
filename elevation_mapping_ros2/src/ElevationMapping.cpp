@@ -21,10 +21,13 @@ ElevationMapping::ElevationMapping()
     pub_raw_map_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
         "output/raw_map", 10
     );  
+    pub_point_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "output/processed_point_cloud", 100
+    );
 
     if (use_pose_update_)
     {
-        RCLCPP_INFO(get_logger(), "Updation by pose message is enabled");
+        RCLCPP_DEBUG(get_logger(), "Updation by pose message is enabled");
         // std::string input_pose_topic = declare_parameter("input.pose_covariance");
         sub_pose_.subscribe(this, "input/pose");
         pose_cache_.connectInput(sub_pose_);
@@ -32,7 +35,7 @@ ElevationMapping::ElevationMapping()
     }
     else 
     {
-        RCLCPP_INFO(get_logger(), "Updation by pose message is disable");
+        RCLCPP_DEBUG(get_logger(), "Updation by pose message is disable");
     }
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
@@ -41,15 +44,12 @@ ElevationMapping::~ElevationMapping() {}
 
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
-    RCLCPP_INFO(get_logger(), "callbackPointCloud called.");
-    
     last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp);
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
     if (use_pose_update_)
     {
-        RCLCPP_INFO(get_logger(), "Listening pose covariance message");
         std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped const> pose_msg = pose_cache_.getElemBeforeTime(last_point_cloud_update_time_);
         if (!pose_msg) 
         {
@@ -67,7 +67,6 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
 
     // process point cloud
-    RCLCPP_INFO(get_logger(), "Processing point cloud.");
     PointCloudType::Ptr point_cloud_map_frame(new PointCloudType);
     Eigen::VectorXf height_variance;
     if (!sensor_processor_->process(_point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
@@ -83,19 +82,21 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
             return;
         }
     }
+    // pcl::PCLPointCloud2 pcl_pc;
+    // sensor_msgs::msg::PointCloud2 processed_point_cloud;
+    // pcl::toPCLPointCloud2(*point_cloud_map_frame, pcl_pc);
+    // pcl_conversions::fromPCL(pcl_pc, processed_point_cloud);
+    // pub_point_cloud_->publish(processed_point_cloud);
 
-    RCLCPP_INFO(get_logger(), "Calling updateMapLocation.");
     updateMapLocation();
 
-    RCLCPP_INFO(get_logger(), "Calling updatePrediction.");
-    if (!updatePrediction(last_point_cloud_update_time_))
-    {
-        RCLCPP_ERROR(get_logger(), "Updating process noise failed");
-        return ;
-    }
+    // if (!updatePrediction(last_point_cloud_update_time_))
+    // {
+    //     RCLCPP_ERROR(get_logger(), "Updating process noise failed");
+    //     return ;
+    // }
 
     // add point cloud to elevation map
-    RCLCPP_INFO(get_logger(), "Calling ElevationGridMap::add.");
     if (!map_.add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
     {
         RCLCPP_ERROR(get_logger(), "Adding point cloud to elevation map failed");
@@ -103,12 +104,14 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         return ;
     }    
 
+    // map_.getRawMap().get("elevation").setZero();
+    // map_.getRawMap().get("variance").setZero();
+
     // fuse previous map and current map
-    // map_.visibilityCleanup();
+    // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
     // map_.fuseAll();
-    RCLCPP_INFO(get_logger(), "Publishing raw map as grid_map_msg::msg::GridMap.");
     grid_map_msgs::msg::GridMap::UniquePtr message;
-    message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap());
+    message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
     pub_raw_map_->publish(std::move(message));
 }
 
@@ -129,7 +132,7 @@ bool ElevationMapping::updateMapLocation()
     {
         // get transformed track point (map to track point)
         // transformed_track_point = tf_buffer_->transform(track_point, map_.getFrameID(), tf2::durationFromSec(1.0));
-        transformed_track_point = tf_buffer_->lookupTransform(track_point_frame_id_, map_.getFrameID(), tf2::TimePointZero);
+        transformed_track_point = tf_buffer_->lookupTransform(map_.getFrameID(), track_point_frame_id_, tf2::TimePointZero);
     }
     catch(const tf2::TransformException& e)
     {
@@ -186,6 +189,7 @@ bool ElevationMapping::readParameters()
 {
     // elevation mapping
     use_pose_update_ = declare_parameter("use_pose_update", true);
+    use_visibility_clean_up_ = declare_parameter("use_visibility_clean_up", true);
     pose_cache_size_ = declare_parameter("pose_cache_size", 10);
     track_point_frame_id_ = declare_parameter("robot_frame", "/base_link");
     time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
@@ -195,6 +199,7 @@ bool ElevationMapping::readParameters()
     sensor_frame = declare_parameter("sensor_frame", "/sensor");
     map_frame = declare_parameter("map_frame", "/map");
     robot_frame = track_point_frame_id_;
+    map_.setFrameID(map_frame);
     sensor_type = declare_parameter("sensor.type", "perfect");
     if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, robot_frame);
     else 

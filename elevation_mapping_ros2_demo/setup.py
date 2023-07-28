@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'resource'), glob('resource/*.ply')),
+        (os.path.join('share', package_name, 'rviz2'), glob('rviz2/*.rviz')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'pcd_publisher_node=elevation_mapping_ros2_demo.pcd_publisher.pcd_publisher_node:main',
+            'tf_publisher_node=elevation_mapping_ros2_demo.tf_publisher.tf_publisher_node:main',
         ],
     },
 )

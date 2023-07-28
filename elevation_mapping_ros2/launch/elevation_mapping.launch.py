@@ -22,9 +22,15 @@ def generate_launch_description():
         'config', 
         'topic_name.yaml')
     
+    visualization_file = os.path.join(
+        get_package_share_directory("elevation_mapping_ros2"),
+        'config',
+        'visualization.yaml' 
+    )
+    
     params = read_yaml(elevation_map_param_file)
     topic_name = read_yaml(topic_name_file)
-        
+            
     elevation_mapping_node = Node(
         package="elevation_mapping_ros2",
         name="elevation_mapping_ros2_node",
@@ -36,6 +42,16 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', 'INFO'], 
         output = 'screen'
     )
+    
+    elevation_raw_map_visualization = Node(
+        package='grid_map_visualization',
+        executable='grid_map_visualization',
+        name='grid_map_visualization',
+        output='screen',
+        parameters=[visualization_file]
+    )
+    
     return LaunchDescription([
         elevation_mapping_node,
+        elevation_raw_map_visualization, 
     ])

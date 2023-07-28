@@ -21,10 +21,6 @@ ElevationMap::~ElevationMap() {}
 bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time_stamp, const Eigen::Affine3d& _transform_sensor2map_)
 {
     const rclcpp::Time method_start_time = system_clock_->now(); // @todo convert to wall clock
-    for (const std::string& layer: raw_map_.getLayers())
-    {
-        RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Raw map layers: " << layer.c_str());
-    }
     // update initial time if it is not initiallized.
     if (initial_time_.seconds() == 0)
     {
@@ -46,7 +42,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     auto& sensor_y_at_lowest_scan_layer = raw_map_["sensor_y_at_lowest_scan"];
     auto& sensor_z_at_lowest_scan_layer = raw_map_["sensor_z_at_lowest_scan"];
 
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating basic layer name");
     std::vector<Eigen::Ref<const grid_map::Matrix>> basic_layer;
     for (const std::string& layer: raw_map_.getBasicLayers())
     {
@@ -54,7 +49,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     }
 
     // for all points
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Processing all point clouds.");
+    size_t point_within_map_num = 0;
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
         auto& point = _point_cloud->points[i];
@@ -63,8 +58,10 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         // Skip if it does not lie within the elevation map
         if (!raw_map_.getIndex(position, index))
         {
+            RCLCPP_INFO_THROTTLE(rclcpp::get_logger(logger_name_), *system_clock_, 1, "skip points");
             continue;
         }
+        point_within_map_num++;
 
         auto& elevation = elevation_layer(index(0), index(1));
         auto& variance = variance_layer(index(0), index(1));
@@ -123,7 +120,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
             sensor_y_at_lowest_scan = sensor_translation.y();
             sensor_z_at_lowest_scan = sensor_translation.z();
         }
-
         elevation = (variance*point.z + point_variance*elevation) / (point_variance + variance);
         variance = (point_variance*variance) / (point_variance + variance);
         // @todo add color fusion
@@ -136,6 +132,8 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         horizontal_variance_y = min_horizontal_variance_;
         horizontal_variance_xy = 0.0;
     } // loop for point cloud
+
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "The number of points within the elevation map is %d", point_within_map_num);
 
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
@@ -450,6 +448,12 @@ void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _r
         << " \n Resolution is " << raw_map_.getResolution() << ".\nLateral length " << raw_map_.getLength()(0) << ". Longitudinal length" << raw_map_.getLength()(1) << ".");
 }
 
+void ElevationMap::setFrameID(const std::string& _frame_id)
+{
+    raw_map_.setFrameId(_frame_id);
+    fused_map_.setFrameId(_frame_id);
+}
+
 const std::string& ElevationMap::getFrameID() const
 {
     return raw_map_.getFrameId();
@@ -477,8 +481,8 @@ float ElevationMap::cumulativeDistributionFunction(float x, float mean, float st
 void ElevationMap::readParameters(rclcpp::Node* _node)
 {
     logger_name_ = _node->declare_parameter("grid_map.logger_name", "ElevationMap");
-    double lateral_length = _node->declare_parameter("grid_map.lateral_length", 5);
-    double longitudinal_length = _node->declare_parameter("grid_map.longitudinal_length", 5);
+    double lateral_length = _node->declare_parameter("grid_map.lateral_length", 5.0);
+    double longitudinal_length = _node->declare_parameter("grid_map.longitudinal_length", 5.0);
     double resolution = _node->declare_parameter("grid_map.resolution", 0.05);
     double position_x = _node->declare_parameter("grid_map.initial_position_x", 0.0);
     double position_y = _node->declare_parameter("grid_map.initial_position_y", 0.0);

@@ -58,6 +58,7 @@ void PerfectSensorProcessor::computeVariance(PointCloudType::Ptr _point_cloud, c
         height_variance += sensor_jac*sensor_variance*sensor_jac.transpose();
 
         _variance(i) = height_variance;
+        assert( _variance(i) >= 0.0 && "Variance of point cloud is lower than 0");
     }
 }
 
