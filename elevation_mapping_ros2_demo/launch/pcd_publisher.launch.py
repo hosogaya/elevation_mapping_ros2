@@ -7,8 +7,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     package_name = 'elevation_mapping_ros2_demo'
 
-    rviz_config_dir = os.path.join(get_package_share_directory(
-        package_name), 'rviz2', 'rviz2.rviz')
+    rviz_config_dir = os.path.join(get_package_share_directory(package_name), 'rviz2', 'rviz2.rviz')
     assert os.path.exists(rviz_config_dir)
 
     ply_path = os.path.join(get_package_share_directory(

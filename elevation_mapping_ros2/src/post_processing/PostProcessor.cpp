@@ -52,8 +52,8 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
 
     grid_map_msgs::msg::GridMap::UniquePtr output_msg;
     output_msg = grid_map::GridMapRosConverter::toMessage(output_map);
-    auto pub_ptr = captured_pub_grid_map_.lock();
-    if (!pub_ptr) return;
+    // auto pub_ptr = captured_pub_grid_map_.lock();
+    // if (!pub_ptr) return;
     pub_grid_map_->publish(std::move(output_msg));
 }
 }

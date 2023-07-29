@@ -110,7 +110,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // fuse previous map and current map
     // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
     // map_.fuseAll();
-    grid_map_msgs::msg::GridMap::UniquePtr message;
+    grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
     message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
     pub_raw_map_->publish(std::move(message));
 }
@@ -139,6 +139,7 @@ bool ElevationMapping::updateMapLocation()
         RCLCPP_ERROR(this->get_logger(), "%s", e.what());
         return false;
     }
+    RCLCPP_INFO(get_logger(), "Move to the position x: %f, y: %f", transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
 
     grid_map::Position position(transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
     // move map to the position

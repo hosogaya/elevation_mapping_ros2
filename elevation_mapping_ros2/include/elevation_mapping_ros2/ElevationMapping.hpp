@@ -52,6 +52,8 @@ private:
     message_filters::Cache<geometry_msgs::msg::PoseWithCovarianceStamped> pose_cache_;
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_raw_map_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_point_cloud_;
+    std::weak_ptr<std::remove_pointer<decltype(pub_raw_map_.get())>::type> captured_pub_raw_map_;
+
     // message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime
     //     <sensor_msgs::msg::PointCloud2, geometry_msgs::msg::PoseWithCovarianceStamped>> sync_sub_;
     
