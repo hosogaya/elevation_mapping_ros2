@@ -1,0 +1,29 @@
+/**:
+  ros__parameters:
+    filter_chain_parameter_name: 'filter'
+
+    filter:
+      filter1:
+        name: inpaint
+        type: gridMapCv/InpaintFilter
+        params:
+          input_layer: elevation
+          output_layer: elevation_inpainted
+          radius: 0.05
+
+      filter2:
+        name: mean_in_radius
+        type: gridMapFilters/MeanInRadiusFilter
+        params:
+          input_layer: elevation_inpainted
+          output_layer: elevation_smooth
+          radius: 0.06
+          
+      filter3:
+        name: surface_normals
+        type: gridMapFilters/NormalVectorsFilter
+        params:
+          input_layer: elevation_inpainted
+          output_layers_prefix: normal_vectors_
+          radius: 0.05
+          normal_vector_positive_axis: z

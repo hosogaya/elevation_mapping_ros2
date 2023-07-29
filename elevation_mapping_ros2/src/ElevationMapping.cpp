@@ -4,9 +4,9 @@ namespace elevation_mapping {
 
 using std::placeholders::_1;
 
-ElevationMapping::ElevationMapping() 
+ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options) 
     // : rclcpp::Node("elevation_mapping", rclcpp::NodeOptions().use_intra_process_comms(true))
-    : rclcpp::Node("elevation_mapping")
+    : rclcpp::Node("elevation_mapping", options)
 {
     readParameters();
     // create tf listener
@@ -216,3 +216,6 @@ bool ElevationMapping::readParameters()
 }
 
 }   
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(elevation_mapping::ElevationMapping)

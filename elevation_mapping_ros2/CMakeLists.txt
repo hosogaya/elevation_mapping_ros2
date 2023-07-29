@@ -23,6 +23,7 @@ find_package(grid_map_core REQUIRED)
 find_package(grid_map_filters REQUIRED)
 
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(rcutils REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -91,6 +92,110 @@ ament_target_dependencies(${PROJECT_NAME}_node
 install(TARGETS
   ${PROJECT_NAME}_node
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# elevation mapping componet
+add_library(${PROJECT_NAME} SHARED
+  src/elevation_mapping_node.cpp
+  src/ElevationMapping.cpp
+  src/ElevationMap.cpp
+  src/RobotMotionUpdater
+  src/sensor_processing/SensorProcessorBase.cpp
+  src/sensor_processing/PerfectSensorProcessor.cpp
+)
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  $<BUILD_INTERFACE:${EIGEN3_INCLUDE_DIR}> # Eigen3
+  $<BUILD_INTERFACE:${PCL_INCLUDE_DIR}> # Eigen3
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${EIGEN3_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  grid_map_msgs
+  grid_map_core
+  grid_map_ros
+  grid_map_filters
+  rclcpp
+  geometry_msgs
+  tf2_eigen
+  tf2_ros
+  tf2
+  filters
+  message_filters
+)
+ament_export_targets(${PROJECT_NAME} HAS_LIBRARY_TARGET)
+
+install(
+  TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
+# post processor component
+add_library(${PROJECT_NAME}_post_processor SHARED
+  src/post_processing/PostProcessor.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_post_processor
+  rclcpp
+  rclcpp_components
+  grid_map_core
+  grid_map_ros
+  grid_map_msgs
+  grid_map_filters
+  filters
+)
+target_include_directories(${PROJECT_NAME}_post_processor
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+ament_export_targets(${PROJECT_NAME}_post_processor HAS_LIBRARY_TARGET)
+
+install(
+  TARGETS ${PROJECT_NAME}_post_processor
+  EXPORT ${PROJECT_NAME}_post_processor
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
+# node composition
+add_executable(${PROJECT_NAME}_composition
+  src/composition/compose_nodes.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_composition
+  rclcpp
+  rclcpp_components
+)
+target_link_libraries(${PROJECT_NAME}_composition
+  ${PROJECT_NAME}
+  ${PROJECT_NAME}_post_processor
+)
+
+target_include_directories(${PROJECT_NAME}_composition
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+install(
+  TARGETS ${PROJECT_NAME}_composition
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY include/
+  DESTINATION include
 )
 
 install(

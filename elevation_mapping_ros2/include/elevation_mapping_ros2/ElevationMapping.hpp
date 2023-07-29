@@ -41,7 +41,7 @@ namespace elevation_mapping
 class ElevationMapping : public rclcpp::Node
 {
 public:
-    ElevationMapping();
+    ElevationMapping(const rclcpp::NodeOptions options = rclcpp::NodeOptions().use_intra_process_comms(true));
     ~ElevationMapping();
 
 private:
