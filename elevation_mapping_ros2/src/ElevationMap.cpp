@@ -58,7 +58,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         // Skip if it does not lie within the elevation map
         if (!raw_map_.getIndex(position, index))
         {
-            RCLCPP_INFO_THROTTLE(rclcpp::get_logger(logger_name_), *system_clock_, 1, "skip points");
+            RCLCPP_DEBUG_THROTTLE(rclcpp::get_logger(logger_name_), *system_clock_, 1, "skip points");
             continue;
         }
         point_within_map_num++;
@@ -141,7 +141,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         horizontal_variance_xy = 0.0;
     } // loop for point cloud
 
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "The number of points within the elevation map is %d", point_within_map_num);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "The number of points within the elevation map is %d", point_within_map_num);
 
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
@@ -440,7 +440,7 @@ void ElevationMap::move(const grid_map::Position& position)
     std::vector<grid_map::BufferRegion> new_region;
     if (raw_map_.move(position, new_region))
     {
-        RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
+        RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
 
         // "dynamic time" layer is meant to be interpreted as integer values, therefore nan:s need to be zero.
         grid_map::Matrix& dynamic_time{raw_map_.get("dynamic_time")};
@@ -448,11 +448,47 @@ void ElevationMap::move(const grid_map::Position& position)
     }
 }
 
+bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, const std::string& layer)
+{
+    // index (0,0) signs the top left corner of grid map
+    int right = 0, left = _src_map.getSize()(1);
+    int bottom = 0, top = _src_map.getSize()(0);
+    for (grid_map::GridMapIterator iterator(_src_map); !iterator.isPastEnd(); ++iterator)
+    {
+        const grid_map::Index& index = *iterator;
+        if (!std::isfinite(_src_map.at(layer, index))) continue;
+        if (index(1) > right) right = index(1);
+        if (index(1) < left) left = index(1);
+        if (index(0) > bottom) bottom = index(0);
+        if (index(0) < top) top = index(0);
+
+        if (index(0) == 199 || index(1) == 198)
+            RCLCPP_INFO(rclcpp::get_logger(logger_name_), "index: (%d, %d), value: %f", index(0), index(1), _src_map.at(layer, index));
+    }
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "submap index. top: %d, bottom: %d, left: %d, right: %d", top, bottom, left, right);
+    grid_map::Index center_index;
+    center_index(1) = std::round((left + right)/2);
+    center_index(0) = std::round((top + bottom)/2);
+    grid_map::Position center_position;
+    _src_map.getPosition(center_index, center_position);
+
+    grid_map::Length length;
+    length(1) = _src_map.getResolution()*(right-left);
+    length(0) = _src_map.getResolution()*(bottom-top);
+
+    bool is_success = true;
+    _dst_map = _src_map.getSubmap(center_position, length, is_success);
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f)", center_position.x(), center_position.y(), length.x(), length.y());
+
+    return is_success;
+}
+
+
 void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _resolution, const grid_map::Position& _position)
 {
     raw_map_.setGeometry(_length, _resolution, _position);
     fused_map_.setGeometry(_length, _resolution, _position);
-    RCLCPP_INFO_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
+    RCLCPP_DEBUG_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
         << " \n Resolution is " << raw_map_.getResolution() << ".\nLateral length " << raw_map_.getLength()(0) << ". Longitudinal length" << raw_map_.getLength()(1) << ".");
 }
 

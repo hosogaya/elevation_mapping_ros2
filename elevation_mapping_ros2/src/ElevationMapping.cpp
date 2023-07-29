@@ -73,7 +73,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     {
         if (!sensor_processor_->isFirstTfAvailable())
         {
-            RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 10, "Waiting for tf transformation to be available. (Message is throttled. 10s)");
+            RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 10, "Waiting for tf transformation to be available. (Message is throttled. 10s)");
             return;
         }
         else 
@@ -110,14 +110,19 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // fuse previous map and current map
     // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
     // map_.fuseAll();
+    GridMap map_pub;
+    if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
+        RCLCPP_INFO(get_logger(), "Failed to get submap information");
+        return;
+    }
     grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-    message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
+    message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
     pub_raw_map_->publish(std::move(message));
 }
 
 bool ElevationMapping::updateMapLocation()
 {
-    RCLCPP_INFO(this->get_logger(), "Elevation map is checked for relocalization");
+    RCLCPP_DEBUG(this->get_logger(), "Elevation map is checked for relocalization");
 
     geometry_msgs::msg::TransformStamped track_point;
     track_point.header.frame_id = track_point_frame_id_;
@@ -139,7 +144,7 @@ bool ElevationMapping::updateMapLocation()
         RCLCPP_ERROR(this->get_logger(), "%s", e.what());
         return false;
     }
-    RCLCPP_INFO(get_logger(), "Move to the position x: %f, y: %f", transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
+    RCLCPP_DEBUG(get_logger(), "Move to the position x: %f, y: %f", transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
 
     grid_map::Position position(transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
     // move map to the position
@@ -157,7 +162,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     }
     else if (_time_stamp < map_.getTimeOfLastUpdate())
     {
-        RCLCPP_INFO(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
+        RCLCPP_DEBUG(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return true;
     }
 

@@ -50,6 +50,7 @@ public:
     bool clean(); // cleans the elevation map data to stay within the specified bounds. 
     void move(const grid_map::Position& position);
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
+    bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, const std::string& layer);
 
     void readParameters(rclcpp::Node* _node);
     
