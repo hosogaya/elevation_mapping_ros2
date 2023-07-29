@@ -1,5 +1,6 @@
 build/
 install/
 log/
-**/__pycache__
-**/.vscode
+__pycache__/
+*.py[cod]
+*$py.class
