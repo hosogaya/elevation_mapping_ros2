@@ -14,7 +14,7 @@ public:
     void readParameters(rclcpp::Node* _node) override;
 private:
     bool filterSensorType(PointCloudType::Ptr _point_cloud) override;
-    void computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
+    void computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
 };  
 
 }

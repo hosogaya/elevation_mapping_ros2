@@ -18,7 +18,7 @@ bool PerfectSensorProcessor::filterSensorType(PointCloudType::Ptr _point_cloud)
     return true;
 }
 
-void PerfectSensorProcessor::computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance)
+void PerfectSensorProcessor::computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance)
 {
     _variance.resize(_point_cloud->size());
 

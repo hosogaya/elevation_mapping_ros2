@@ -50,7 +50,7 @@ protected:
     bool removeOutsideLimits(const PointCloudType::Ptr& _reference, std::vector<PointCloudType::Ptr>& _point_clouds);
     virtual bool filterSensorType(PointCloudType::Ptr _point_cloud) = 0;
 
-    virtual void computeVariance(PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) = 0;
+    virtual void computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) = 0;
 
     Eigen::Matrix3f computeSkewMatrixfromVector(const Eigen::Vector3f& _vec);
 
