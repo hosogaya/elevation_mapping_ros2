@@ -57,6 +57,7 @@ add_executable(${PROJECT_NAME}_node
   src/RobotMotionUpdater
   src/sensor_processing/SensorProcessorBase.cpp
   src/sensor_processing/PerfectSensorProcessor.cpp
+  src/sensor_processing/StereoSensorProcessor.cpp
 
   # test/test_sensor_processor.cpp
 # test/test_robot_motion_updater.cpp
@@ -94,6 +95,9 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# create ament index resource which references the libraries in the binary dir
+set(node_plugins "")
+
 # elevation mapping componet
 add_library(${PROJECT_NAME} SHARED
   src/elevation_mapping_node.cpp
@@ -102,6 +106,7 @@ add_library(${PROJECT_NAME} SHARED
   src/RobotMotionUpdater
   src/sensor_processing/SensorProcessorBase.cpp
   src/sensor_processing/PerfectSensorProcessor.cpp
+  src/sensor_processing/StereoSensorProcessor.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -130,6 +135,8 @@ ament_target_dependencies(${PROJECT_NAME}
   filters
   message_filters
 )
+rclcpp_components_register_nodes(${PROJECT_NAME} "elevation_mapping::ElevationMapping")
+set(node_plugins "${node_plugins}elevation_mapping::ElevationMapping;$<TARGET_FILE:${PROJECT_NAME}>\n")
 ament_export_targets(${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 install(
@@ -159,6 +166,8 @@ target_include_directories(${PROJECT_NAME}_post_processor
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+rclcpp_components_register_nodes(${PROJECT_NAME}_post_processor "elevation_mapping::PostProcessor")
+set(node_plugins "${node_plugins}elevation_mapping::PostProcessor;$<TARGET_FILE:${PROJECT_NAME}_post_processor>\n")
 ament_export_targets(${PROJECT_NAME}_post_processor HAS_LIBRARY_TARGET)
 
 install(
