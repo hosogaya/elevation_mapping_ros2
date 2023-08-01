@@ -31,10 +31,16 @@
     sensor:
       logger_name: PerfectSensorProcessor
       type: "perfect"
-      use_voxel_filter: false
-      voxel_leaf_size: 0.01
+      use_voxel_filter: true
+      voxel_leaf_size: 0.05
       # pass_filter_lower_threshold: -100.0 # -infinity
       # pass_filter_upper_threshold: 0.4
+
+    # sensor:
+    #   logger_name: StereoSensorProcessor
+    #   type: "stereo"
+    #   use_voxel_filter: false
+    #   voxel_leaf_size: 0.01
 
     robot_motion_updater:
       logger_name: RobotMotionUpdater

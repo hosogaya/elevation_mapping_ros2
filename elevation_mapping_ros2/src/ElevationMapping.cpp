@@ -112,7 +112,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // map_.fuseAll();
     GridMap map_pub;
     if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
-        RCLCPP_INFO(get_logger(), "Failed to get submap information");
+        // RCLCPP_INFO(get_logger(), "Failed to get submap information");
         return;
     }
     grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);

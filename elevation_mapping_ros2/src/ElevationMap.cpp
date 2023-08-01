@@ -461,11 +461,7 @@ bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, 
         if (index(1) < left) left = index(1);
         if (index(0) > bottom) bottom = index(0);
         if (index(0) < top) top = index(0);
-
-        if (index(0) == 199 || index(1) == 198)
-            RCLCPP_INFO(rclcpp::get_logger(logger_name_), "index: (%d, %d), value: %f", index(0), index(1), _src_map.at(layer, index));
     }
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "submap index. top: %d, bottom: %d, left: %d, right: %d", top, bottom, left, right);
     grid_map::Index center_index;
     center_index(1) = std::round((left + right)/2);
     center_index(0) = std::round((top + bottom)/2);
