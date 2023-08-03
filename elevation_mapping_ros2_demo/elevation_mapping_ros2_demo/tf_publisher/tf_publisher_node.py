@@ -21,6 +21,7 @@ class TfPublisher(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.tf_broadcaster = TransformBroadcaster(self)
         
+        self.is_first_tf = False
         self.publish_tf()
         
         self.publisher = self.create_publisher(geometry_msgs.PoseWithCovarianceStamped, 'pose_covariance', 10)
@@ -28,13 +29,18 @@ class TfPublisher(Node):
         self.timer = self.create_timer(0.05, self.timer_callback)
         
     def publish_tf(self):
-         # publish transform from map to robot
+        if not self.is_first_tf:
+            self.is_first_tf = True
+            self.time_first_tf: rclpy.time.Time = self.get_clock().now()
+            
+        # publish transform from map to robot
+        duration: rclpy.time.Duration = self.get_clock().now() - self.time_first_tf
         map_to_robot = geometry_msgs.TransformStamped()
         map_to_robot.header.stamp = self.get_clock().now().to_msg()
         map_to_robot.header.frame_id = self.get_parameter("map_frame").get_parameter_value().string_value
         map_to_robot.child_frame_id = self.get_parameter("robot_frame").get_parameter_value().string_value
         map_to_robot.transform.translation.x = 2.0
-        map_to_robot.transform.translation.y = 6.0
+        map_to_robot.transform.translation.y = 6.0 + 0.2*float(duration.nanoseconds) / 1e9
         map_to_robot.transform.translation.z = 0.0
         map_to_robot.transform.rotation.x = 0.0
         map_to_robot.transform.rotation.y = 0.0

@@ -53,6 +53,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
         auto& point = _point_cloud->points[i];
+        if (std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z)) continue;
         grid_map::Index index;
         grid_map::Position position(point.x, point.y);
         // Skip if it does not lie within the elevation map
@@ -77,6 +78,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         auto& sensor_z_at_lowest_scan = sensor_z_at_lowest_scan_layer(index(0), index(1));
     
         const float point_variance = _variance(i);
+        if (std::isnan(point_variance)) continue;
         bool is_vaild = std::all_of(basic_layer.begin(), basic_layer.end(), [&](Eigen::Ref<const grid_map::Matrix> layer){return std::isfinite(layer(index(0), index(1)));});
 
         if (!is_vaild)

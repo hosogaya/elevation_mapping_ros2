@@ -27,7 +27,7 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
 
     if (use_pose_update_)
     {
-        RCLCPP_DEBUG(get_logger(), "Updation by pose message is enabled");
+        RCLCPP_INFO(get_logger(), "Updation by pose message is enabled");
         // std::string input_pose_topic = declare_parameter("input.pose_covariance");
         sub_pose_.subscribe(this, "input/pose");
         pose_cache_.connectInput(sub_pose_);
@@ -35,7 +35,7 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     }
     else 
     {
-        RCLCPP_DEBUG(get_logger(), "Updation by pose message is disable");
+        RCLCPP_INFO(get_logger(), "Updation by pose message is disable");
     }
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
@@ -90,11 +90,11 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     updateMapLocation();
 
-    // if (!updatePrediction(last_point_cloud_update_time_))
-    // {
-    //     RCLCPP_ERROR(get_logger(), "Updating process noise failed");
-    //     return ;
-    // }
+    if (!updatePrediction(last_point_cloud_update_time_))
+    {
+        RCLCPP_ERROR(get_logger(), "Updating process noise failed");
+        return ;
+    }
 
     // add point cloud to elevation map
     if (!map_.add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
@@ -110,11 +110,11 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // fuse previous map and current map
     // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
     // map_.fuseAll();
-    GridMap map_pub;
-    if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
-        // RCLCPP_INFO(get_logger(), "Failed to get submap information");
-        return;
-    }
+    GridMap map_pub = map_.getRawMap();
+    // if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
+    //     // RCLCPP_INFO(get_logger(), "Failed to get submap information");
+    //     return;
+    // }
     grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
     message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
     pub_raw_map_->publish(std::move(message));
@@ -208,6 +208,10 @@ bool ElevationMapping::readParameters()
     map_.setFrameID(map_frame);
     sensor_type = declare_parameter("sensor.type", "perfect");
     if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, robot_frame);
+    else if (sensor_type == "stereo") 
+    {
+        sensor_processor_ = std::make_shared<StereoSensorProcessor>(sensor_frame, map_frame, robot_frame);
+    }
     else 
     {
         RCLCPP_ERROR(get_logger(), "The sensor type %s is invailed", sensor_type.c_str());

@@ -35,6 +35,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     if (!reducePoint(point_cloud_sensor_frame)) return false;
 
     // specific filtering per sensor type
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Filtering according to sensor type");
     if (!filterSensorType(point_cloud_sensor_frame)) return false;
 
     // transform into map frame
@@ -45,6 +46,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     if (!removeOutsideLimits(_processed_point_cloud_map_frame, point_cloud_list)) return false;
 
     // compute variance 
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Compute variance");
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);
 
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %d", _processed_point_cloud_map_frame->points.size());
