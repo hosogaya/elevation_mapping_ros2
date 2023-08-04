@@ -45,7 +45,7 @@ ElevationMapping::~ElevationMapping() {}
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
     last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp, RCL_ROS_TIME);
-    
+
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
     if (use_pose_update_)
@@ -73,7 +73,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     {
         if (!sensor_processor_->isFirstTfAvailable())
         {
-            RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 10, "Waiting for tf transformation to be available. (Message is throttled. 10s)");
+            RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 10, "Waiting for tf transformation to be available. (Message is throttled. 10s)");
             return;
         }
         else 
@@ -110,14 +110,23 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     // fuse previous map and current map
     // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
     // map_.fuseAll();
-    GridMap map_pub = map_.getRawMap();
-    // if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
-    //     // RCLCPP_INFO(get_logger(), "Failed to get submap information");
-    //     return;
-    // }
-    grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-    message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
-    pub_raw_map_->publish(std::move(message));
+    if (extract_vaild_area_)
+    {
+        GridMap map_pub;
+        if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
+            // RCLCPP_INFO(get_logger(), "Failed to get submap information");
+            return;
+        }
+        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
+        message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
+        pub_raw_map_->publish(std::move(message));
+    }
+    else
+    {
+        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
+        message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
+        pub_raw_map_->publish(std::move(message));
+    }
 }
 
 bool ElevationMapping::updateMapLocation()
@@ -199,6 +208,7 @@ bool ElevationMapping::readParameters()
     pose_cache_size_ = declare_parameter("pose_cache_size", 10);
     track_point_frame_id_ = declare_parameter("robot_frame", "/base_link");
     time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
+    extract_vaild_area_ = declare_parameter("extract_vaild_area", true);
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
     std::string sensor_type, sensor_frame, map_frame, robot_frame;

@@ -89,6 +89,7 @@ private:
     std::string track_point_frame_id_ = "base_link"; // /robot
 
     double time_tolerance_prediction_; // seconds
+    bool extract_vaild_area_ = true;
     // float max_no_update_duration_;
 };
 

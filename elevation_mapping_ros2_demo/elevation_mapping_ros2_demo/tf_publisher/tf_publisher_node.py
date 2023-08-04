@@ -40,7 +40,7 @@ class TfPublisher(Node):
         map_to_robot.header.frame_id = self.get_parameter("map_frame").get_parameter_value().string_value
         map_to_robot.child_frame_id = self.get_parameter("robot_frame").get_parameter_value().string_value
         map_to_robot.transform.translation.x = 2.0
-        map_to_robot.transform.translation.y = 6.0 + 0.2*float(duration.nanoseconds) / 1e9
+        map_to_robot.transform.translation.y = 6.0# + 0.2*float(duration.nanoseconds) / 1e9
         map_to_robot.transform.translation.z = 0.0
         map_to_robot.transform.rotation.x = 0.0
         map_to_robot.transform.rotation.y = 0.0
