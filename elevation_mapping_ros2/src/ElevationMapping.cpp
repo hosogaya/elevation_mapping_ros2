@@ -44,8 +44,8 @@ ElevationMapping::~ElevationMapping() {}
 
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
-    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp);
-
+    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp, RCL_ROS_TIME);
+    
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
     if (use_pose_update_)
@@ -53,7 +53,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped const> pose_msg = pose_cache_.getElemBeforeTime(last_point_cloud_update_time_);
         if (!pose_msg) 
         {
-            if (pose_cache_.getOldestTime().seconds() > last_point_cloud_update_time_.seconds())
+            if (pose_cache_.getOldestTime() > last_point_cloud_update_time_)
             {
                 RCLCPP_ERROR(this->get_logger(), "The oldest pose available is at %f, requested pose at %f", pose_cache_.getOldestTime().seconds(), last_point_cloud_update_time_.seconds());
             }
@@ -160,7 +160,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
         RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return false;
     }
-    else if (_time_stamp < map_.getTimeOfLastUpdate())
+    else if (_time_stamp < map_.getTimeOfLastUpdate(RCL_ROS_TIME))
     {
         RCLCPP_DEBUG(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
         return true;
@@ -171,7 +171,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     if (!pose_msg)
     {
         // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty
-        if (pose_cache_.getOldestTime().seconds() > last_point_cloud_update_time_.seconds())
+        if (pose_cache_.getOldestTime() > last_point_cloud_update_time_)
         {
             RCLCPP_ERROR(get_logger(), "The oldest pose available is at %f, requested pose at %f", pose_cache_.getOldestTime().seconds(), last_point_cloud_update_time_.seconds());
         }

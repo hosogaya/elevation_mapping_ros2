@@ -59,7 +59,7 @@ public:
 
     // getter
     const std::string& getFrameID() const;
-    const rclcpp::Time getTimeOfLastUpdate() const;
+    const rclcpp::Time getTimeOfLastUpdate(const rcl_clock_type_t type = RCL_ROS_TIME) const;
     GridMap& getRawMap();
     GridMap& getFusedMap();
 private:

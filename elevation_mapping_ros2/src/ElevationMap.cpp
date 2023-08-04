@@ -442,6 +442,7 @@ void ElevationMap::move(const grid_map::Position& position)
     std::vector<grid_map::BufferRegion> new_region;
     if (raw_map_.move(position, new_region))
     {
+        if (raw_map_.isDefaultStartIndex()) raw_map_.convertToDefaultStartIndex();
         RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Elevatino map has been moved to position (%f, %f)", position.x(), position.y());
 
         // "dynamic time" layer is meant to be interpreted as integer values, therefore nan:s need to be zero.
@@ -501,9 +502,9 @@ const std::string& ElevationMap::getFrameID() const
     return raw_map_.getFrameId();
 }
 
-const rclcpp::Time ElevationMap::getTimeOfLastUpdate() const 
+const rclcpp::Time ElevationMap::getTimeOfLastUpdate(rcl_clock_type_t type) const 
 {
-    return rclcpp::Time(raw_map_.getTimestamp());
+    return rclcpp::Time(raw_map_.getTimestamp(), type);
 }
 
 GridMap& ElevationMap::getRawMap()  
