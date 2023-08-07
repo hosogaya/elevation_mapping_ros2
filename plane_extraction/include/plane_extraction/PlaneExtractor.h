@@ -11,19 +11,23 @@ namespace plane_extraction{
 class PlaneExtractor : public rclcpp::Node
 {
 public:
-    PlaneExtractor();
+    PlaneExtractor(const rclcpp::NodeOptions option);
     ~PlaneExtractor();
 
 private:
     rclcpp::Subscription<grid_map_msgs::msg::GridMap>::SharedPtr sub_grid_map_;
     void callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr _source_map);
 
-    bool extractWithGeometry(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
-    bool extractWithTraversability(const grid_map::GridMap& _src, std::vector<grid_map::GridMap>& _dst);
-    bool extractWithNormalVector(const grid_map::GridMap& _src, std::vector<grid_map::GridMap>& _dst);
+    rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_grid_map_;
+    void publishGridMap(const grid_map::GridMap& _src);
 
-    typedef struct Cell
+    bool extractOperatingRange(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+    bool divideByTraversability(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+    bool extractWithNormalVector(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+
+    struct Cell
     {
+        Cell(const grid_map::Index& ind, const double& v) : index(ind), value(v) {}
         double value;
         grid_map::Index index;
     };
