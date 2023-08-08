@@ -6,6 +6,8 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/msg/grid_map.hpp>
 
+#include <opencv2/imgproc/imgproc_c.h>
+
 namespace plane_extraction{
 
 class PlaneExtractor : public rclcpp::Node
@@ -23,7 +25,8 @@ private:
 
     bool extractOperatingRange(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
     bool divideByTraversability(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
-    bool extractWithNormalVector(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+    bool divideByNormalVector(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+    bool dividePlane(grid_map::GridMap& _src, const std::string& input_layer, const std::string& output_layer);
 
     struct Cell
     {

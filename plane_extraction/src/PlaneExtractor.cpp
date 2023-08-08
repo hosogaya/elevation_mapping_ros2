@@ -37,9 +37,10 @@ void PlaneExtractor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePt
         return;
     }
 
+    dividePlane(traversabilty_map, "travesability0", "plane");
     RCLCPP_INFO(get_logger(), "Publish grid_map");
     publishGridMap(traversabilty_map);
-
+    
 }
 
 bool PlaneExtractor::extractOperatingRange(const grid_map::GridMap& _src, grid_map::GridMap& _dst)
@@ -111,6 +112,41 @@ bool PlaneExtractor::divideByTraversability(const grid_map::GridMap& _src, grid_
     }
 
     return true;
+}
+
+bool PlaneExtractor::dividePlane(grid_map::GridMap& _src, const std::string& input_layer, const std::string& output_layer)
+{
+    // get amp
+    auto& map = _src.get(input_layer);
+    
+    // convert to cv gray image (unsigned int8_t, 1 channel)
+    cv::Mat gray, binary;
+    grid_map::GridMapCvConverter::toImage<uint8_t, 1>(_src, input_layer, CV_8UC1, gray);
+    cv::threshold(gray, binary, 0, 255, cv::THRESH_BINARY); // binary
+
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(binary, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+
+    // Fill inside contours
+    cv::Scalar color(255); // white color
+    for (int idx=0; idx>=0; idx = hierarchy[idx][0])
+    {
+        cv::Mat img(binary.size(), CV_8UC1, cv::Scalar(0)); // black color
+        cv::drawContours(img, contours, idx, color, CV_FILLED, 8, hierarchy);
+        // convert to grid map
+        grid_map::GridMapCvConverter::addLayerFromImage<uint8_t, 1>
+            (img, output_layer+std::to_string(idx), _src);
+    }
+
+    return true;
+}
+
+
+bool PlaneExtractor::divideByNormalVector(const grid_map::GridMap& _src, grid_map::GridMap& _dst)
+{
+    
 }
 
 void PlaneExtractor::publishGridMap(const grid_map::GridMap& _src)
