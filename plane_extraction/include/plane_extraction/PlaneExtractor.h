@@ -24,9 +24,12 @@ private:
     void publishGridMap(const grid_map::GridMap& _src);
 
     bool extractOperatingRange(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
-    bool divideByTraversability(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
-    bool divideByNormalVector(const grid_map::GridMap& _src, grid_map::GridMap& _dst);
+    bool divideByTraversability(grid_map::GridMap& _src);
+    bool divideByNormalVector(grid_map::GridMap& _src);
     bool dividePlane(grid_map::GridMap& _src, const std::string& input_layer, const std::string& output_layer);
+
+    void addData(const double& data, int& size, double& mean, double& variance);
+    void removeData(const double& data, int& size, double& mean, double& variance);
 
     struct Cell
     {
