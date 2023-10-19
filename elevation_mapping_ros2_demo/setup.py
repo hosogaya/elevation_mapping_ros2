@@ -25,8 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'pcd_publisher_node=elevation_mapping_ros2_demo.pcd_publisher.pcd_publisher_node:main',
-            'tf_publisher_node=elevation_mapping_ros2_demo.tf_publisher.tf_publisher_node:main',
+            'pcd_publisher_node=elevation_mapping_ros2_demo.pcd_publisher_node:main',
+            'tf_publisher_node=elevation_mapping_ros2_demo.tf_publisher_node:main',
         ],
     },
 )
