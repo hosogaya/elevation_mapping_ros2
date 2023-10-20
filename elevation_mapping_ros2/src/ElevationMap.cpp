@@ -477,7 +477,10 @@ bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, 
 
     bool is_success = true;
     _dst_map = _src_map.getSubmap(center_position, length, is_success);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f)", center_position.x(), center_position.y(), length.x(), length.y());
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+                center_position.x(), center_position.y(), length.x(), length.y(), bottom-top, right-left);
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+                _dst_map.getPosition().x(), _dst_map.getPosition().y(), _dst_map.getLength().x(), _dst_map.getLength().y(), _dst_map.getSize()[0], _dst_map.getSize()[1]);
 
     return is_success;
 }
