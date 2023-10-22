@@ -15,21 +15,21 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
 
     // subscriber
     sub_point_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
+        "elevation_mapping/input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
     );
 
     pub_raw_map_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-        "output/raw_map", 10
+        "elevation_mapping/output/raw_map", 10
     );  
     pub_point_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-        "output/processed_point_cloud", 100
+        "elevation_mapping/output/processed_point_cloud", 100
     );
 
     if (use_pose_update_)
     {
         RCLCPP_INFO(get_logger(), "Updation by pose message is enabled");
         // std::string input_pose_topic = declare_parameter("input.pose_covariance");
-        sub_pose_.subscribe(this, "input/pose");
+        sub_pose_.subscribe(this, "elevation_mapping/input/pose");
         pose_cache_.connectInput(sub_pose_);
         pose_cache_.setCacheSize(pose_cache_size_);
     }
@@ -119,12 +119,14 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         }
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
+        RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
     else
     {
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
+        RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
 }

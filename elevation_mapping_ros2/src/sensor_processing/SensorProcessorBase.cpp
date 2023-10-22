@@ -49,7 +49,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Compute variance");
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);
 
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %d", _processed_point_cloud_map_frame->points.size());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %d", _processed_point_cloud_map_frame->points.size());
     return true;
 }
 

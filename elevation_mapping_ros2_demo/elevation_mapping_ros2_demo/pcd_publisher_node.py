@@ -35,7 +35,7 @@ class PcdPublisher(Node):
         # Read more here: 
         # http://wiki.ros.org/rospy/Overview/Publishers%20and%20Subscribers
         self.pcd_publisher = self.create_publisher(sensor_msgs.PointCloud2, 'pcd', 10)
-        timer_period = 1/30.0
+        timer_period = 2
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):

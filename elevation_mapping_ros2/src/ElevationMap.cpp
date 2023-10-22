@@ -148,7 +148,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
     const rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
 
     return true;
 }
@@ -293,7 +293,7 @@ bool ElevationMap::fuse(const grid_map::Index& _top_left_index, const grid_map::
 
     fused_map_.setTimestamp(copy_raw_map.getTimestamp());
     const rclcpp::Duration duration(system_clock_->now()-method_start_time);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Elevation map has been fused in %f s", duration.seconds());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Elevation map has been fused in %f s", duration.seconds());
 
     return true;
 } // end of fuse
@@ -386,7 +386,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
     } // end of remove position
 
     rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
@@ -477,10 +477,10 @@ bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, 
 
     bool is_success = true;
     _dst_map = _src_map.getSubmap(center_position, length, is_success);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
-                center_position.x(), center_position.y(), length.x(), length.y(), bottom-top, right-left);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
-                _dst_map.getPosition().x(), _dst_map.getPosition().y(), _dst_map.getLength().x(), _dst_map.getLength().y(), _dst_map.getSize()[0], _dst_map.getSize()[1]);
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+                // center_position.x(), center_position.y(), length.x(), length.y(), bottom-top, right-left);
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+                // _dst_map.getPosition().x(), _dst_map.getPosition().y(), _dst_map.getLength().x(), _dst_map.getLength().y(), _dst_map.getSize()[0], _dst_map.getSize()[1]);
 
     return is_success;
 }

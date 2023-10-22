@@ -50,6 +50,20 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+
+set(dependencies
+  grid_map_msgs
+  grid_map_core
+  grid_map_ros
+  grid_map_filters
+  rclcpp
+  geometry_msgs
+  tf2_eigen
+  tf2_ros
+  tf2
+  filters
+  message_filters
+)
 add_executable(${PROJECT_NAME}_node
   src/elevation_mapping_node.cpp
   src/ElevationMapping.cpp
@@ -58,9 +72,6 @@ add_executable(${PROJECT_NAME}_node
   src/sensor_processing/SensorProcessorBase.cpp
   src/sensor_processing/PerfectSensorProcessor.cpp
   src/sensor_processing/StereoSensorProcessor.cpp
-
-  # test/test_sensor_processor.cpp
-# test/test_robot_motion_updater.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_node
@@ -77,17 +88,7 @@ target_link_libraries(${PROJECT_NAME}_node
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node
-  grid_map_msgs
-  grid_map_core
-  grid_map_ros
-  grid_map_filters
-  rclcpp
-  geometry_msgs
-  tf2_eigen
-  tf2_ros
-  tf2
-  filters
-  message_filters
+  ${dependencies}
 )
 
 install(TARGETS
@@ -123,17 +124,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
-  grid_map_msgs
-  grid_map_core
-  grid_map_ros
-  grid_map_filters
-  rclcpp
-  geometry_msgs
-  tf2_eigen
-  tf2_ros
-  tf2
-  filters
-  message_filters
+  ${dependencies}
 )
 rclcpp_components_register_nodes(${PROJECT_NAME} "elevation_mapping::ElevationMapping")
 set(node_plugins "${node_plugins}elevation_mapping::ElevationMapping;$<TARGET_FILE:${PROJECT_NAME}>\n")
@@ -153,13 +144,7 @@ add_library(${PROJECT_NAME}_post_processor SHARED
   src/post_processing/PostProcessor.cpp
 )
 ament_target_dependencies(${PROJECT_NAME}_post_processor
-  rclcpp
-  rclcpp_components
-  grid_map_core
-  grid_map_ros
-  grid_map_msgs
-  grid_map_filters
-  filters
+  ${dependencies}
 )
 target_include_directories(${PROJECT_NAME}_post_processor
   PUBLIC
@@ -214,4 +199,7 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+ament_export_dependencies(
+  ${dependencies}
+)
 ament_package()

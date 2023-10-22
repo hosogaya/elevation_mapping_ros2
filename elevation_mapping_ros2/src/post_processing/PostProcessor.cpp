@@ -6,10 +6,10 @@ PostProcessor::PostProcessor(const rclcpp::NodeOptions options)
     : rclcpp::Node("post_processor", options), filter_chain_("grid_map::GridMap")
 {
     sub_grid_map_ = create_subscription<grid_map_msgs::msg::GridMap>(
-        "input/grid_map", 10, std::bind(&PostProcessor::callbackGridMap, this, std::placeholders::_1)
+        "post_processing/input/grid_map", 10, std::bind(&PostProcessor::callbackGridMap, this, std::placeholders::_1)
     );
     pub_grid_map_ = create_publisher<grid_map_msgs::msg::GridMap>(
-        "output/grid_map", 10
+        "post_processing/output/grid_map", 10
     );
     captured_pub_grid_map_ = pub_grid_map_;
 
@@ -42,6 +42,8 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
     grid_map::GridMap input_map;
     grid_map::GridMap output_map;
 
+    RCLCPP_INFO(get_logger(), "subscribe map address: 0x%x", &(_grid_map->data));
+
     grid_map::GridMapRosConverter::fromMessage(*_grid_map, input_map);
 
     if (!filter_chain_.update(input_map, output_map))
@@ -54,6 +56,8 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
     output_msg = grid_map::GridMapRosConverter::toMessage(output_map);
     // auto pub_ptr = captured_pub_grid_map_.lock();
     // if (!pub_ptr) return;
+    RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(output_msg->data));
+    
     pub_grid_map_->publish(std::move(output_msg));
 }
 }
