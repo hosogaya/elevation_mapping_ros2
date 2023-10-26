@@ -119,14 +119,14 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         }
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
-        RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
+        // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
     else
     {
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
-        RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
+        // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
 }
