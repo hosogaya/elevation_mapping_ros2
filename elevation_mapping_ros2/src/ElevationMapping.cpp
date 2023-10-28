@@ -44,6 +44,7 @@ ElevationMapping::~ElevationMapping() {}
 
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
+    std::chrono::system_clock::time_point begin = std::chrono::system_clock::now();
     last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp, RCL_ROS_TIME);
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
@@ -129,6 +130,9 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
+    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
+    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf", elapsed);
 }
 
 bool ElevationMapping::updateMapLocation()

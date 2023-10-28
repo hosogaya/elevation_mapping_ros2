@@ -42,6 +42,8 @@ bool PostProcessor::readParameters()
 
 void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr _grid_map)
 {
+    std::chrono::system_clock::time_point begin = std::chrono::system_clock::now();
+
     grid_map::GridMap input_map;
     grid_map::GridMap output_map;
 
@@ -72,6 +74,10 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
     // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(output_msg->data));
     
     pub_grid_map_->publish(std::move(output_msg));
+
+    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
+    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+    RCLCPP_INFO(get_logger(), "post processing time: %lf", elapsed);
 }
 }
 
