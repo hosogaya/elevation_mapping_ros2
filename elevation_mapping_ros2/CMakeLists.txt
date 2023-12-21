@@ -28,6 +28,7 @@ find_package(rcutils REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(pcl_msgs REQUIRED)
 
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
@@ -57,12 +58,14 @@ set(dependencies
   grid_map_ros
   grid_map_filters
   rclcpp
+  rclcpp_components
   geometry_msgs
   tf2_eigen
   tf2_ros
   tf2
   filters
   message_filters
+  pcl_msgs
 )
 add_executable(${PROJECT_NAME}_node
   src/elevation_mapping_node.cpp

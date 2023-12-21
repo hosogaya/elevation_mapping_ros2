@@ -19,7 +19,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     PointCloudType point_cloud;
     pcl::fromROSMsg(*_point_cloud, point_cloud);
     current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Input point cloud size: %d", point_cloud.points.size());
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
 
     /** listening transform from sensor frame to map frame*/
     if (!updateTransformations()) return false;
@@ -49,7 +49,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Compute variance");
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);
 
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %d", _processed_point_cloud_map_frame->points.size());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %ld", _processed_point_cloud_map_frame->points.size());
     return true;
 }
 

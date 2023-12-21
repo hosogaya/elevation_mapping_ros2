@@ -143,7 +143,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         horizontal_variance_xy = 0.0;
     } // loop for point cloud
 
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "The number of points within the elevation map is %d", point_within_map_num);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "The number of points within the elevation map is %ld", point_within_map_num);
 
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
@@ -386,7 +386,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
     } // end of remove position
 
     rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%d point)", duration.seconds(), (int)cell_position_to_remove.size());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%ld point)", duration.seconds(), (int)cell_position_to_remove.size());
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
@@ -477,9 +477,9 @@ bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, 
 
     bool is_success = true;
     _dst_map = _src_map.getSubmap(center_position, length, is_success);
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%ld, %ld)", 
                 // center_position.x(), center_position.y(), length.x(), length.y(), bottom-top, right-left);
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%d, %d)", 
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Extrating submap. center: (%f, %f), length: (%f, %f), Size: (%ld, %ld)", 
                 // _dst_map.getPosition().x(), _dst_map.getPosition().y(), _dst_map.getLength().x(), _dst_map.getLength().y(), _dst_map.getSize()[0], _dst_map.getSize()[1]);
 
     return is_success;
