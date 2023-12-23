@@ -83,11 +83,6 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
             return;
         }
     }
-    // pcl::PCLPointCloud2 pcl_pc;
-    // sensor_msgs::msg::PointCloud2 processed_point_cloud;
-    // pcl::toPCLPointCloud2(*point_cloud_map_frame, pcl_pc);
-    // pcl_conversions::fromPCL(pcl_pc, processed_point_cloud);
-    // pub_point_cloud_->publish(processed_point_cloud);
 
     updateMapLocation();
 
@@ -105,17 +100,11 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         return ;
     }    
 
-    // map_.getRawMap().get("elevation").setZero();
-    // map_.getRawMap().get("variance").setZero();
-
-    // fuse previous map and current map
-    // if (use_visibility_clean_up_) map_.visibilityCleanup(last_point_cloud_update_time_);
-    // map_.fuseAll();
     if (extract_vaild_area_)
     {
-        GridMap map_pub;
-        if (!map_.extractVaildArea(map_.getRawMap(), map_pub, "elevation")) {
-            // RCLCPP_INFO(get_logger(), "Failed to get submap information");
+        GridMap map_pub(map_.getRawMap().getBasicLayers());
+        if (!map_.extractVaildArea(map_.getRawMap(), map_pub)) {
+            RCLCPP_INFO(get_logger(), "Failed to get submap information");
             return;
         }
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);

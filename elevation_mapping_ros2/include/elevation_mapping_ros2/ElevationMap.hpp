@@ -42,15 +42,12 @@ public:
     ~ElevationMap();
 
     bool add (PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time, const Eigen::Affine3d& _transform_sensor2map_);
-    bool fuseAll();
-    bool fuse(const grid_map::Index& _top_left_index, const grid_map::Size& size);
     bool update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp);
     bool clear();
-    void resetFusedMap();
     bool clean(); // cleans the elevation map data to stay within the specified bounds. 
     void move(const grid_map::Position& position);
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
-    bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map, const std::string& layer);
+    bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map);
 
     void readParameters(rclcpp::Node* _node);
     
@@ -61,7 +58,6 @@ public:
     const std::string& getFrameID() const;
     const rclcpp::Time getTimeOfLastUpdate(const rcl_clock_type_t type = RCL_ROS_TIME) const;
     GridMap& getRawMap();
-    GridMap& getFusedMap();
 private:
     static float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
@@ -73,7 +69,6 @@ private:
     rclcpp::Time scanning_duration_;
 
     GridMap raw_map_; //
-    GridMap fused_map_; // update data by using covariance of map position
     GridMap visibility_clean_up_map_;
 
     // parameter
