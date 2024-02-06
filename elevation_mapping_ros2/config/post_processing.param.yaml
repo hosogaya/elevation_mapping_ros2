@@ -1,15 +1,15 @@
-/**:
+post_processing:
   ros__parameters:
     filter_chain_parameter_name: 'filter'
 
     filter:
-      filter1:
-        name: inpaint
-        type: gridMapCv/InpaintFilter
-        params:
-          input_layer: elevation
-          output_layer: elevation_inpainted
-          radius: 0.11
+      # filter1:
+      #   name: inpaint
+      #   type: gridMapCv/InpaintFilter
+      #   params:
+      #     input_layer: elevation
+      #     output_layer: elevation_inpainted
+      #     radius: 0.11
 
       filter2:
         name: mean_in_radius

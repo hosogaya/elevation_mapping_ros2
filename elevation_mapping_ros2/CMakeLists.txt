@@ -20,6 +20,7 @@ find_package(ament_cmake REQUIRED)
 find_package(grid_map_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
+find_package(grid_map_cv REQUIRED)
 find_package(grid_map_filters REQUIRED)
 
 find_package(rclcpp REQUIRED)
@@ -57,6 +58,7 @@ set(dependencies
   grid_map_core
   grid_map_ros
   grid_map_filters
+  grid_map_cv
   rclcpp
   rclcpp_components
   geometry_msgs

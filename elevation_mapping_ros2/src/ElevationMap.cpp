@@ -5,7 +5,7 @@ namespace elevation_mapping
 
 ElevationMap::ElevationMap()
     : raw_map_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", 
-        "color", "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"})
+        "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"})
 {
     raw_map_.setBasicLayers({"elevation", "variance"});
     clear();
@@ -32,7 +32,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     auto& horizontal_variance_x_layer = raw_map_["horizontal_variance_x"];
     auto& horizontal_variance_y_layer = raw_map_["horizontal_variance_y"];
     auto& horizontal_variance_xy_layer = raw_map_["horizontal_variance_xy"];
-    auto& color_layer = raw_map_["color"];
+    // auto& color_layer = raw_map_["color"];
     auto& time_layer = raw_map_["time"];
     auto& dynamic_time_layer = raw_map_["dynamic_time"];
     auto& lowest_scan_point_layer = raw_map_["lowest_scan_point"];
@@ -40,11 +40,11 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     auto& sensor_y_at_lowest_scan_layer = raw_map_["sensor_y_at_lowest_scan"];
     auto& sensor_z_at_lowest_scan_layer = raw_map_["sensor_z_at_lowest_scan"];
 
-    std::vector<Eigen::Ref<const grid_map::Matrix>> basic_layer;
-    for (const std::string& layer: raw_map_.getBasicLayers())
-    {
-        basic_layer.emplace_back(raw_map_.get(layer));
-    }
+    // std::vector<Eigen::Ref<const grid_map::Matrix>> basic_layer;
+    // for (const std::string& layer: raw_map_.getBasicLayers())
+    // {
+    //     basic_layer.emplace_back(raw_map_.get(layer));
+    // }
 
     // for all points
     size_t point_within_map_num = 0;
@@ -68,7 +68,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         auto& horizontal_variance_x = horizontal_variance_x_layer(index(0), index(1));
         auto& horizontal_variance_y = horizontal_variance_y_layer(index(0), index(1));
         auto& horizontal_variance_xy = horizontal_variance_xy_layer(index(0), index(1));
-        auto& color = color_layer(index(0), index(1));
+        // auto& color = color_layer(index(0), index(1));
         auto& time = time_layer(index(0), index(1));
         auto& dynaic_time = dynamic_time_layer(index(0), index(1));
         auto& lowest_scan_point = lowest_scan_point_layer(index(0), index(1));
@@ -78,16 +78,15 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     
         const float point_variance = _variance(i);
         if (std::isnan(point_variance)) continue;
-        bool is_vaild = std::all_of(basic_layer.begin(), basic_layer.end(), [&](Eigen::Ref<const grid_map::Matrix> layer){return std::isfinite(layer(index(0), index(1)));});
-
-        if (!is_vaild)
+        // bool is_vaild = std::all_of(basic_layer.begin(), basic_layer.end(), [&](Eigen::Ref<const grid_map::Matrix> layer){return std::isfinite(layer(index(0), index(1)));});
+        if (!std::isfinite(elevation) || !std::isfinite(variance))
         {
             elevation = point.z;
             variance = point_variance;
             horizontal_variance_x = min_horizontal_variance_;
             horizontal_variance_y = min_horizontal_variance_;
             horizontal_variance_xy = 0.0;
-            grid_map::colorVectorToValue(point.getRGBVector3i(), color);
+            // grid_map::colorVectorToValue(point.getRGBVector3i(), color);
             continue;
         }
 
@@ -127,12 +126,13 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         if (point_variance == 0.0) {
             elevation = point.z;
         }
-        else {
+        else if (point_variance > 0.0) 
+        {
             elevation = (variance*point.z + point_variance*elevation) / (point_variance + variance);
             variance = (point_variance*variance) / (point_variance + variance);
         }
 
-        grid_map::colorVectorToValue(point.getRGBVector3i(), color);
+        // grid_map::colorVectorToValue(point.getRGBVector3i(), color);
         time = scan_time_since_initialization.seconds();
         dynaic_time = current_time.seconds();
 

@@ -21,9 +21,6 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     pub_raw_map_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
         "elevation_mapping/output/raw_map", 10
     );  
-    pub_point_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-        "elevation_mapping/output/processed_point_cloud", 100
-    );
 
     if (use_pose_update_)
     {
@@ -68,6 +65,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
 
     // process point cloud
+    auto s_pc_process = std::chrono::system_clock::now();
     PointCloudType::Ptr point_cloud_map_frame(new PointCloudType);
     Eigen::VectorXf height_variance;
     if (!sensor_processor_->process(_point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
@@ -83,6 +81,9 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
             return;
         }
     }
+    auto e_pc_process = std::chrono::system_clock::now();
+    double elapsed_pc_process = std::chrono::duration_cast<std::chrono::milliseconds>(e_pc_process - s_pc_process).count();
+    RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
 
     updateMapLocation();
 
@@ -93,13 +94,18 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
 
     // add point cloud to elevation map
+    auto s_add = std::chrono::system_clock::now();
     if (!map_.add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
     {
         RCLCPP_ERROR(get_logger(), "Adding point cloud to elevation map failed");
         // reset map update timer
         return ;
     }    
+    auto e_add = std::chrono::system_clock::now();
+    double elapsed_add = std::chrono::duration_cast<std::chrono::milliseconds>(e_add - s_add).count();
+    RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
 
+    auto s_publish = std::chrono::system_clock::now();
     if (extract_vaild_area_)
     {
         GridMap map_pub(map_.getRawMap().getBasicLayers());
@@ -119,9 +125,13 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
+    auto e_publish = std::chrono::system_clock::now();
+    double elapsed_publish = std::chrono::duration_cast<std::chrono::milliseconds>(e_publish - s_publish).count();
+    RCLCPP_INFO(get_logger(), "Publish time: %lf ms", elapsed_publish);
+
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf", elapsed);
+    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
 }
 
 bool ElevationMapping::updateMapLocation()

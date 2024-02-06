@@ -17,12 +17,9 @@ private:
 
     rclcpp::Subscription<grid_map_msgs::msg::GridMap>::SharedPtr sub_grid_map_;
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_grid_map_;
-    rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_sub_map_;
     std::weak_ptr<std::remove_pointer<decltype(pub_grid_map_.get())>::type> captured_pub_grid_map_;
 
     filters::FilterChain<grid_map::GridMap> filter_chain_;
-    grid_map::Position center_;
-    grid_map::Length length_;
 };
 
 }

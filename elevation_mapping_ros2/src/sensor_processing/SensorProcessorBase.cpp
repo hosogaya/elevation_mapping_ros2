@@ -18,9 +18,11 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
 {
     PointCloudType point_cloud;
     pcl::fromROSMsg(*_point_cloud, point_cloud);
-    current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
-
+    // current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
+    current_time_point_ = tf2::TimePointZero; // is it OK?
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
+    
+    auto s_transform = std::chrono::system_clock::now();
     /** listening transform from sensor frame to map frame*/
     if (!updateTransformations()) return false;
 
@@ -28,6 +30,12 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     PointCloudType::Ptr point_cloud_sensor_frame(new PointCloudType);
     if (!transformPointCloud(point_cloud, point_cloud_sensor_frame, kSensorFrameID_)) return false;
 
+    auto e_transform = std::chrono::system_clock::now();
+    double elapsed_transform = std::chrono::duration_cast<std::chrono::milliseconds>(e_transform - s_transform).count();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transform point cloud time: %lf ms", elapsed_transform);
+
+
+    auto s_filtering = std::chrono::system_clock::now();
     // remove Nans 
     if (!removeNans(point_cloud_sensor_frame)) return false;
 
@@ -37,6 +45,9 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     // specific filtering per sensor type
     RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Filtering according to sensor type");
     if (!filterSensorType(point_cloud_sensor_frame)) return false;
+    auto e_filtering = std::chrono::system_clock::now();
+    double elapsed_filtering = std::chrono::duration_cast<std::chrono::milliseconds>(e_filtering - s_filtering).count();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Filtering point cloud time: %lf ms", elapsed_filtering);
 
     // transform into map frame
     if (!transformPointCloud(*point_cloud_sensor_frame, _processed_point_cloud_map_frame, kMapFrameID_)) return false;
@@ -57,17 +68,17 @@ bool SensorProcessorBase::updateTransformations()
 {
     try {  
         // sensor to map
-        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(1.0));
+        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(0.1));
         transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
-        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, current_time_point_, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, current_time_point_, tf2::durationFromSec(0.1));
         Eigen::Affine3d transform;
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
 
         // map to base
-        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kRobotFrameID_, current_time_point_, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kRobotFrameID_, current_time_point_, tf2::durationFromSec(0.1));
         transform = tf2::transformToEigen(transformTF);
         rotation_map2base_ = transform.rotation().matrix();
         translation_map2base_ = transform.translation();
@@ -91,7 +102,7 @@ bool SensorProcessorBase::transformPointCloud(const PointCloudType& _point_cloud
     const std::string& input_frame = _point_cloud.header.frame_id;
     geometry_msgs::msg::TransformStamped transformTF;
     try {
-        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, current_time_point_, tf2::durationFromSec(1.0));
+        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, current_time_point_, tf2::durationFromSec(0.1));
     }
     catch (const tf2::TransformException& ex) {
         RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "%s", ex.what());

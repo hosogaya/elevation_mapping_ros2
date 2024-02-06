@@ -11,9 +11,6 @@ PostProcessor::PostProcessor(const rclcpp::NodeOptions options)
     pub_grid_map_ = create_publisher<grid_map_msgs::msg::GridMap>(
         "post_processing/output/grid_map", 10
     );
-    pub_sub_map_ = create_publisher<grid_map_msgs::msg::GridMap>(
-        "post_processing/output/sub_map", 10
-    );
     captured_pub_grid_map_ = pub_grid_map_;
 
     if (!readParameters()) 
@@ -55,16 +52,6 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
     {
         RCLCPP_ERROR(get_logger(), "Could not update the grid map filter chain");
         return;
-    }
-
-    bool success;
-    grid_map::GridMap sub_map = output_map.getSubmap(center_, length_, success);
-
-    if (success)
-    {
-        grid_map_msgs::msg::GridMap::UniquePtr sub_map_msg = grid_map::GridMapRosConverter::toMessage(sub_map);
-        // RCLCPP_INFO(get_logger(), "publish sub map address: 0x%x", &(sub_map_msg->data));
-        pub_grid_map_->publish(std::move(sub_map_msg));   
     }
 
     grid_map_msgs::msg::GridMap::UniquePtr output_msg;

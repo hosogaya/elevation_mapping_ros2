@@ -1,4 +1,4 @@
-/**:
+elevation_mapping:
   ros__parameters:
     # frame IDs
     map_frame: "map"
