@@ -101,7 +101,7 @@ bool SensorProcessorBase::transformPointCloud(const PointCloudType& _point_cloud
     const std::string& input_frame = _point_cloud.header.frame_id;
     geometry_msgs::msg::TransformStamped transformTF;
     try {
-        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, current_time_point_, tf2::durationFromSec(0.1));
+        transformTF = tf_buffer_->lookupTransform(_target_frame, input_frame, tf2::TimePointZero, tf2::durationFromSec(0.1));
     }
     catch (const tf2::TransformException& ex) {
         RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "%s", ex.what());
