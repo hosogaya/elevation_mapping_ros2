@@ -18,8 +18,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
 {
     PointCloudType point_cloud;
     pcl::fromROSMsg(*_point_cloud, point_cloud);
-    // current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
-    current_time_point_ = tf2::TimePointZero; // is it OK?
+    current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
     RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
     
     auto s_transform = std::chrono::system_clock::now();
