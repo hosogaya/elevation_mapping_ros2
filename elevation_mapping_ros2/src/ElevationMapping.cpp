@@ -83,7 +83,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
     auto e_pc_process = std::chrono::system_clock::now();
     double elapsed_pc_process = std::chrono::duration_cast<std::chrono::milliseconds>(e_pc_process - s_pc_process).count();
-    RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
+    // RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
 
     updateMapLocation();
 
@@ -103,7 +103,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }    
     auto e_add = std::chrono::system_clock::now();
     double elapsed_add = std::chrono::duration_cast<std::chrono::milliseconds>(e_add - s_add).count();
-    RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
+    // RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
 
     auto s_publish = std::chrono::system_clock::now();
     if (extract_vaild_area_)
@@ -127,11 +127,11 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
     auto e_publish = std::chrono::system_clock::now();
     double elapsed_publish = std::chrono::duration_cast<std::chrono::milliseconds>(e_publish - s_publish).count();
-    RCLCPP_INFO(get_logger(), "Publish time: %lf ms", elapsed_publish);
+    // RCLCPP_INFO(get_logger(), "Publish time: %lf ms", elapsed_publish);
 
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
+    // RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
 }
 
 bool ElevationMapping::updateMapLocation()

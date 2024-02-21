@@ -19,7 +19,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     PointCloudType point_cloud;
     pcl::fromROSMsg(*_point_cloud, point_cloud);
     current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
     
     auto s_transform = std::chrono::system_clock::now();
     /** listening transform from sensor frame to map frame*/
@@ -31,7 +31,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
 
     auto e_transform = std::chrono::system_clock::now();
     double elapsed_transform = std::chrono::duration_cast<std::chrono::milliseconds>(e_transform - s_transform).count();
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transform point cloud time: %lf ms", elapsed_transform);
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transform point cloud time: %lf ms", elapsed_transform);
 
 
     auto s_filtering = std::chrono::system_clock::now();
@@ -46,7 +46,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     if (!filterSensorType(point_cloud_sensor_frame)) return false;
     auto e_filtering = std::chrono::system_clock::now();
     double elapsed_filtering = std::chrono::duration_cast<std::chrono::milliseconds>(e_filtering - s_filtering).count();
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Filtering point cloud time: %lf ms", elapsed_filtering);
+    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Filtering point cloud time: %lf ms", elapsed_filtering);
 
     // transform into map frame
     if (!transformPointCloud(*point_cloud_sensor_frame, _processed_point_cloud_map_frame, kMapFrameID_)) return false;
