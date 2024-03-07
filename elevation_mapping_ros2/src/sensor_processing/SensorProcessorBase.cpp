@@ -67,17 +67,17 @@ bool SensorProcessorBase::updateTransformations()
 {
     try {  
         // sensor to map
-        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(0.1));
+        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, tf2::TimePointZero);
         transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
-        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, current_time_point_, tf2::durationFromSec(0.1));
+        transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, tf2::TimePointZero);
         Eigen::Affine3d transform;
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
 
         // map to base
-        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kRobotFrameID_, current_time_point_, tf2::durationFromSec(0.1));
+        transformTF = tf_buffer_->lookupTransform(kMapFrameID_, kRobotFrameID_, tf2::TimePointZero);
         transform = tf2::transformToEigen(transformTF);
         rotation_map2base_ = transform.rotation().matrix();
         translation_map2base_ = transform.translation();
