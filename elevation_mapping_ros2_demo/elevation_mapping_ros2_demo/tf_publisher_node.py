@@ -15,7 +15,7 @@ class TfPublisher(Node):
         super().__init__('static_transform_publisher')
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("robot_frame", "base_link")
-        self.declare_parameter("sensor_frame", "zedm_base_link")
+        self.declare_parameter("sensor_frame", "camera_link")
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)

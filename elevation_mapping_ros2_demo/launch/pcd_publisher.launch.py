@@ -26,7 +26,7 @@ def generate_launch_description():
             name='pcd_publisher_node',
             output='screen',
             arguments=[ply_path],
-            remappings=[("pcd", "/zedm/zed_node/point_cloud/cloud_registered")], 
+            remappings=[("pcd", "/point_cloud")], 
         ),
         Node(
             package=package_name, 
