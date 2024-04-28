@@ -15,11 +15,11 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
 
     // subscriber
     sub_point_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "elevation_mapping/input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
+        "input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
     );
 
     pub_raw_map_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-        "elevation_mapping/output/raw_map", 10
+        "output/raw_map", 10
     );  
 
     if (use_pose_update_)

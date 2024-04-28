@@ -6,10 +6,10 @@ PostProcessor::PostProcessor(const rclcpp::NodeOptions options)
     : rclcpp::Node("post_processor", options), filter_chain_("grid_map::GridMap")
 {
     sub_grid_map_ = create_subscription<grid_map_msgs::msg::GridMap>(
-        "post_processing/input/grid_map", 10, std::bind(&PostProcessor::callbackGridMap, this, std::placeholders::_1)
+        "input/grid_map", 10, std::bind(&PostProcessor::callbackGridMap, this, std::placeholders::_1)
     );
     pub_grid_map_ = create_publisher<grid_map_msgs::msg::GridMap>(
-        "post_processing/output/grid_map", 10
+        "output/grid_map", 10
     );
     captured_pub_grid_map_ = pub_grid_map_;
 
