@@ -39,10 +39,10 @@ void StereoSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clo
     const Eigen::Matrix3f rotation_variance = _robot_covariance.bottomRightCorner(3, 3).cast<float>();
 
     // Preparations for robot rotation jacobian
-    const Eigen::Matrix3f R_B2M_transpose = rotation_map2base_.transpose().cast<float>();
-    const Eigen::RowVector3f Pro_R_B2M_transpose = projection_vector*R_B2M_transpose;
-    const Eigen::Matrix3f R_S2B_transpose = rotation_base2sensor_.transpose().cast<float>();
-    const Eigen::Matrix3f T_B2S_skew = computeSkewMatrixfromVector(translation_base2sensor_.cast<float>());
+    const Eigen::Matrix3f rotation_map2base_transpose = rotation_map2base_.transpose().cast<float>();
+    const Eigen::RowVector3f projected_rotation_map2base_transpose = projection_vector*rotation_map2base_transpose;
+    const Eigen::Matrix3f rotation_base2sensor_transpose = rotation_base2sensor_.transpose().cast<float>();
+    const Eigen::Matrix3f translation_base2sensor_skew = computeSkewMatrixfromVector(translation_base2sensor_.cast<float>());
 
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
@@ -59,8 +59,8 @@ void StereoSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clo
         sensor_variance.diagonal() << variance_lateral, variance_lateral, variance_normal;
         
         // robot rotation jacobian
-        const Eigen::Matrix3f T_S2P_inB_skew = computeSkewMatrixfromVector(R_S2B_transpose*point_vector); // R_S2B_transpose_times_T_B2S_skew
-        const Eigen::RowVector3f rotation_jac = Pro_R_B2M_transpose*(T_S2P_inB_skew+T_B2S_skew); // jacobian  d{(projection)*(B2P in map frame)}/d{rotation angle} 
+        const Eigen::Matrix3f translation_sensor2point_skew_in_base_frame = computeSkewMatrixfromVector(rotation_base2sensor_transpose*point_vector); 
+        const Eigen::RowVector3f rotation_jac = projected_rotation_map2base_transpose*(translation_base2sensor_skew + translation_sensor2point_skew_in_base_frame); 
 
         // variance for map 
         height_variance = rotation_jac*rotation_variance*rotation_jac.transpose();

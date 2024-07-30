@@ -31,7 +31,7 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
 
     auto e_transform = std::chrono::system_clock::now();
     double elapsed_transform = std::chrono::duration_cast<std::chrono::milliseconds>(e_transform - s_transform).count();
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Transform point cloud time: %lf ms", elapsed_transform);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Transform point cloud time: %lf ms", elapsed_transform);
 
 
     auto s_filtering = std::chrono::system_clock::now();
@@ -46,9 +46,9 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     if (!filterSensorType(point_cloud_sensor_frame)) return false;
     auto e_filtering = std::chrono::system_clock::now();
     double elapsed_filtering = std::chrono::duration_cast<std::chrono::milliseconds>(e_filtering - s_filtering).count();
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Filtering point cloud time: %lf ms", elapsed_filtering);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Filtering point cloud time: %lf ms", elapsed_filtering);
 
-    // transform into map frame
+    // transform into map frame, and base frame
     if (!transformPointCloud(*point_cloud_sensor_frame, _processed_point_cloud_map_frame, kMapFrameID_)) return false;
 
     // remove outside limits in map frame
@@ -59,20 +59,20 @@ bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr
     RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Compute variance");
     computeVariance(point_cloud_sensor_frame, _robot_covariance, _variance);
 
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Output point cloud size: %ld", _processed_point_cloud_map_frame->points.size());
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Output point cloud size: %ld", _processed_point_cloud_map_frame->points.size());
     return true;
 }
 
 bool SensorProcessorBase::updateTransformations()
 {
     try {  
-        // sensor to map
+        // sensor2map. i.e. transform_sensor2map_* v_in_map_frame = v_in_sensor_frame
         geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(0.05));
         transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
         transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, tf2::TimePointZero);
-        Eigen::Affine3d transform;
+        Eigen::Affine3d transform = tf::transformToEigen(transformTF);
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
 

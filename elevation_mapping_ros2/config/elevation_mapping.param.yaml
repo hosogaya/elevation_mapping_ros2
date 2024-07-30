@@ -3,14 +3,14 @@ elevation_mapping:
     # frame IDs
     map_frame: "map"
     robot_frame: "base_link"
-    sensor_frame: "zedm_base_link"
+    sensor_frame: "camera_link"
     # sensor_frame: "zedm_left_camera_optical_frame"
     # pose update
     use_pose_update: false
     pose_cache_size: 10
     # visibility clean up
     use_visibility_clean_up: false
-    extract_vaild_area: true
+    extract_vaild_area: false
 
     # grid map
     grid_map:

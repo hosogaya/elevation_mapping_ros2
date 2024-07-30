@@ -43,7 +43,7 @@ class PcdPublisher(Node):
         # into a sensor_msgs.PointCloud2 object. The second argument is the 
         # name of the frame the point cloud will be represented in. The default
         # (fixed) frame in RViz is called 'map'
-        self.pcd = point_cloud(self.points, 'map')
+        self.pcd = point_cloud(self.points, 'pcd_link')
         # Then I publish the PointCloud2 object 
         self.pcd_publisher.publish(self.pcd)
         
