@@ -26,26 +26,30 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
     grid_map::Matrix horizontal_variance_update_x(size(0), size(1));
     grid_map::Matrix horizontal_variance_update_y(size(0), size(1));
     grid_map::Matrix horizontal_variance_update_xy(size(0), size(1));
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "[RobotMotionUpdater::update] initialized");
 
     // Relative covariance matrix between two robot poses
     ReducedCovariance reduced_covariance; // sigma
     computeReducedCovariance(_pose_transform, _pose_covariance, reduced_covariance);
     ReducedCovariance relative_convariance; // sigma B_tildeB
     computeRelativeCovariance(_pose_transform, reduced_covariance, relative_convariance);
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "[RobotMotionUpdater::update] reduced covariance");
+
 
     Eigen::Matrix3d position_covariance = relative_convariance.topLeftCorner(3,3);
     Eigen::Matrix3d rotation_covariance = Eigen::Matrix3d::Zero();
     rotation_covariance(2,2) = relative_convariance(3,3);
 
-    // Eigen::Matrix3d map2robot_rotation = _pose_transform.rotation().transpose()*_map.getPose().rotation(); // -C(\phi_tildeBM)
-    Eigen::Matrix3d map2robot_rotation = _pose_transform.rotation().transpose(); // -C(\phi_tildeBM)
-    Eigen::Matrix3d map2pre_robot_rotation_inverse = (map2robot_rotation).transpose();
+    Eigen::Matrix3d map2robot_rotation = _pose_transform.rotation().transpose(); // map frame is parallel to world frame
+    // Eigen::Matrix3d map2pre_robot_rotation_inverse = (pre_robot_pose_.rotation().transpose()).transpose();
+    Eigen::Matrix3d map2pre_robot_rotation_inverse = pre_robot_pose_.rotation(); // C(\Phi_B1M1)^T
 
     Eigen::Matrix3d translation_jac = -map2robot_rotation.transpose(); // J_r
     Eigen::Vector3f translation_variance_update = (translation_jac*position_covariance*translation_jac.transpose()).diagonal().cast<float>();
 
     // map-robot relative position
-    const Eigen::Vector3d position_robot2map = -pre_robot_pose_.translation();
+    // const Eigen::Vector3d position_robot2map = map.getPose().getRotation().transpose()*(_map.getPose().getPosition() - pre_robot_pose_.getPosition());
+    const Eigen::Vector3d position_robot2map = -pre_robot_pose_.translation(); // M1_r_B1M1
 
     auto& height_layer = _map.getRawMap()["elevation"];
 
@@ -53,8 +57,8 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
     {
         for (size_t j=0; j<static_cast<size_t>(size(1)); ++j)
         {
+            // position in map frame
             Eigen::Vector3d cell_position;
-
             const auto height = height_layer(i, j);
             if (std::isfinite(height))
             {
@@ -64,7 +68,7 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
                 cell_position.y() = position.y();
                 cell_position.z() = height;
 
-                const Eigen::Matrix3d rotation_jac = -computeSkewMatrixfromVector(position_robot2map + cell_position)*map2pre_robot_rotation_inverse;
+                const Eigen::Matrix3d rotation_jac = -computeSkewMatrixfromVector(cell_position + position_robot2map)*map2pre_robot_rotation_inverse;
                 
                 // rotation variance update
                 const Eigen::Matrix2f rotation_variance_update = (rotation_jac*rotation_covariance*rotation_jac.transpose()).topLeftCorner<2,2>().cast<float>();
@@ -150,7 +154,7 @@ Eigen::Matrix3d RobotMotionUpdater::computeSkewMatrixfromVector(const Eigen::Vec
 
 void RobotMotionUpdater::readParameters(rclcpp::Node* _node)
 {
-    logger_name_ = _node->declare_parameter("robot_motion_updater.logger_name", "RobotMotionUpdater");
+    logger_name_ = _node->declare_parameter("robot_motion_updater.logger_name_", "RobotMotionUpdater");
 }
 
 

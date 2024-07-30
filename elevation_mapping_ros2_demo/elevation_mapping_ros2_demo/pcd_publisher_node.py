@@ -6,6 +6,7 @@ import rclpy
 from rclpy.context import Context
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+import rclpy.time
 import sensor_msgs.msg as sensor_msgs
 import std_msgs.msg as std_msgs
 
@@ -44,6 +45,7 @@ class PcdPublisher(Node):
         # name of the frame the point cloud will be represented in. The default
         # (fixed) frame in RViz is called 'map'
         self.pcd = point_cloud(self.points, 'pcd_link')
+        self.pcd.header.stamp = self.get_clock().now().to_msg()
         # Then I publish the PointCloud2 object 
         self.pcd_publisher.publish(self.pcd)
         

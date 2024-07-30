@@ -26,7 +26,7 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     {
         RCLCPP_INFO(get_logger(), "Updation by pose message is enabled");
         // std::string input_pose_topic = declare_parameter("input.pose_covariance");
-        sub_pose_.subscribe(this, "elevation_mapping/input/pose");
+        sub_pose_.subscribe(this, "/input/pose");
         pose_cache_.connectInput(sub_pose_);
         pose_cache_.setCacheSize(pose_cache_size_);
     }
@@ -42,7 +42,7 @@ ElevationMapping::~ElevationMapping() {}
 void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
 {
     std::chrono::system_clock::time_point begin = std::chrono::system_clock::now();
-    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp, RCL_ROS_TIME);
+    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp);
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
@@ -51,7 +51,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         std::shared_ptr<geometry_msgs::msg::PoseWithCovarianceStamped const> pose_msg = pose_cache_.getElemBeforeTime(last_point_cloud_update_time_);
         if (!pose_msg) 
         {
-            if (pose_cache_.getOldestTime() > last_point_cloud_update_time_)
+            if (pose_cache_.getOldestTime().nanoseconds() > last_point_cloud_update_time_.nanoseconds())
             {
                 RCLCPP_ERROR(this->get_logger(), "The oldest pose available is at %f, requested pose at %f", pose_cache_.getOldestTime().seconds(), last_point_cloud_update_time_.seconds());
             }
@@ -83,7 +83,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
     auto e_pc_process = std::chrono::system_clock::now();
     double elapsed_pc_process = std::chrono::duration_cast<std::chrono::milliseconds>(e_pc_process - s_pc_process).count();
-    // RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
+    RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
 
     updateMapLocation();
 
@@ -103,9 +103,8 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }    
     auto e_add = std::chrono::system_clock::now();
     double elapsed_add = std::chrono::duration_cast<std::chrono::milliseconds>(e_add - s_add).count();
-    // RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
+    RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
 
-    auto s_publish = std::chrono::system_clock::now();
     if (extract_vaild_area_)
     {
         GridMap map_pub(map_.getRawMap().getBasicLayers());
@@ -115,23 +114,18 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
         }
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
-        // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
     else
     {
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
-        // RCLCPP_INFO(get_logger(), "publish map address: 0x%x", &(message->data));
         pub_raw_map_->publish(std::move(message));
     }
-    auto e_publish = std::chrono::system_clock::now();
-    double elapsed_publish = std::chrono::duration_cast<std::chrono::milliseconds>(e_publish - s_publish).count();
-    // RCLCPP_INFO(get_logger(), "Publish time: %lf ms", elapsed_publish);
 
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-    // RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
+    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
 }
 
 bool ElevationMapping::updateMapLocation()
@@ -200,8 +194,10 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     tf2::fromMsg(pose_msg->pose.pose, transform);
     
     // compute map variacne update from motion prediction
+    RCLCPP_INFO(get_logger(), "Calling RobotMotionUpdater::update");
     robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp);
 
+    RCLCPP_INFO(get_logger(), "Finished RobotMotionUpdater::update");
     return true;
 }
 
@@ -226,6 +222,10 @@ bool ElevationMapping::readParameters()
     else if (sensor_type == "stereo") 
     {
         sensor_processor_ = std::make_shared<StereoSensorProcessor>(sensor_frame, map_frame, robot_frame);
+    }
+    else if (sensor_type == "laser")
+    {
+        sensor_processor_ = std::make_shared<LaserSensorProcessor>(sensor_frame, map_frame, robot_frame);
     }
     else 
     {

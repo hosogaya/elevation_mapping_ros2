@@ -298,6 +298,7 @@ void ElevationMap::move(const grid_map::Position& position)
     }
 }
 
+
 bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map)
 {
     bool is_success = true;

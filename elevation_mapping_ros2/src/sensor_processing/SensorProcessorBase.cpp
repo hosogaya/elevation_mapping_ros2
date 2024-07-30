@@ -67,7 +67,7 @@ bool SensorProcessorBase::updateTransformations()
 {
     try {  
         // sensor2map. i.e. transform_sensor2map_* v_in_map_frame = v_in_sensor_frame
-        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::durationFromSec(0.05));
+        geometry_msgs::msg::TransformStamped transformTF = tf_buffer_->lookupTransform(kSensorFrameID_, kMapFrameID_, current_time_point_, tf2::TimePointZero);
         transform_sensor2map_= tf2::transformToEigen(transformTF);
         
         // base to sensor
@@ -87,9 +87,6 @@ bool SensorProcessorBase::updateTransformations()
     }
     catch(const tf2::TransformException& e)
     {
-        if (!first_tf_available_) {
-            return false;
-        }
         RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "%s", e.what());
         return false;
     }

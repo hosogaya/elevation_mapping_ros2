@@ -78,6 +78,7 @@ add_executable(${PROJECT_NAME}_node
   src/sensor_processing/SensorProcessorBase.cpp
   src/sensor_processing/PerfectSensorProcessor.cpp
   src/sensor_processing/StereoSensorProcessor.cpp
+  src/sensor_processing/LaserSensorProcessor.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_node

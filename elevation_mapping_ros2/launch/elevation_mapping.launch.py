@@ -36,7 +36,9 @@ def generate_launch_description():
         name=container_name, 
         package="rclcpp_components",
         executable="component_container",
-        namespace=""
+        namespace="",
+        emulate_tty=True, # needed for display of logs, 
+        output='screen'        
     )
 
     elevation_mapping = IncludeLaunchDescription(

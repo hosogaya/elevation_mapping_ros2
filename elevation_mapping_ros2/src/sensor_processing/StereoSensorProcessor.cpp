@@ -78,10 +78,10 @@ void StereoSensorProcessor::readParameters(rclcpp::Node* _node)
     param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("sensor.pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
     logger_name_ = _node->declare_parameter("sensor.logger_name", "StereoSensorProcessor");
 
-    depth_upper_limit_ = _node->declare_parameter("depth_upper_limit", 20.0);
-    depth_lower_limit_ = _node->declare_parameter("depth_lower_limit", 0.1);
-    coef_normal_variance_ = _node->declare_parameter("coef_normal_variance", 0.0001); 
-    coef_lateral_variance_ = _node->declare_parameter("coef_lateral_variance", 0.0001);
+    depth_upper_limit_ = _node->declare_parameter("sensor.depth_upper_limit", 20.0);
+    depth_lower_limit_ = _node->declare_parameter("sensor.depth_lower_limit", 0.1);
+    coef_normal_variance_ = _node->declare_parameter("sensor.coef_normal_variance", 0.0001); 
+    coef_lateral_variance_ = _node->declare_parameter("sensor.coef_lateral_variance", 0.0001);
 }
 
 }

@@ -9,8 +9,10 @@ public:
     LaserSensorProcessor(const std::string& _sensor_frame, const std::string& _map_frame, const std::string& _robot_frame);
     ~LaserSensorProcessor();
 
+    void readParameters(rclcpp::Node* _node) override;
 private:
-    virtual void computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
+    bool filterSensorType(PointCloudType::Ptr _point_cloud) override;
+    void computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance) override;
 
     double min_radius_square_;
     double beam_angle_;

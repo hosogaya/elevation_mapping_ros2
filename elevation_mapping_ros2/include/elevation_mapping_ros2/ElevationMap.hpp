@@ -46,6 +46,9 @@ public:
     bool clear();
     bool clean(); // cleans the elevation map data to stay within the specified bounds. 
     void move(const grid_map::Position& position);
+
+    // bool fuse(const grid_map::Index& top_left_index, grid_map::Index& size);
+
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
     bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map);
 

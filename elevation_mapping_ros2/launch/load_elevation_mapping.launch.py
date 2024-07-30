@@ -26,10 +26,12 @@ def launch_setup(context, *args, **kwargs):
                 name="elevatoin_mapping",
                 extra_arguments=[{"use_intra_process_comms": True}],
                 parameters=[param], 
-                remappings=[("input/point_cloud", topic_name["input"]["point_cloud"]), 
+                remappings=[
+                    ("input/point_cloud", topic_name["input"]["point_cloud"]), 
                     ("input/pose", topic_name["input"]["pose_covariance"]), 
                     ("output/raw_map", topic_name["output"]["raw_map"]), 
-                    ],
+                
+                ],
             ),
         ],
     )
