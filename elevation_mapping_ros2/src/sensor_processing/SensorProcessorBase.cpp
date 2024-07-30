@@ -72,7 +72,7 @@ bool SensorProcessorBase::updateTransformations()
         
         // base to sensor
         transformTF = tf_buffer_->lookupTransform(kRobotFrameID_, kSensorFrameID_, tf2::TimePointZero);
-        Eigen::Affine3d transform = tf::transformToEigen(transformTF);
+        Eigen::Affine3d transform = tf2::transformToEigen(transformTF);
         rotation_base2sensor_ = transform.rotation().matrix();
         translation_base2sensor_ = transform.translation();
 

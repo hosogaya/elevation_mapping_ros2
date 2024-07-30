@@ -46,11 +46,10 @@ void StereoSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clo
 
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
-        const auto point{_point_cloud->points[i]};
+        const auto& point{_point_cloud->points[i]};
         Eigen::Vector3f point_vector{point.x, point.y, point.z};
-        float height_variance = 0.0;
 
-        float measurement_distance2 = std::pow(point.x, 2.0)+std::pow(point.y, 2.0) + std::pow(point.z, 2.0);
+        float measurement_distance2 = point.x*point.x + point.y*point.y + point.z*point.z;
 
         // compute sensor covariance matirx
         float variance_normal = coef_normal_variance_* measurement_distance2;
@@ -63,7 +62,7 @@ void StereoSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clo
         const Eigen::RowVector3f rotation_jac = projected_rotation_map2base_transpose*(translation_base2sensor_skew + translation_sensor2point_skew_in_base_frame); 
 
         // variance for map 
-        height_variance = rotation_jac*rotation_variance*rotation_jac.transpose();
+        float height_variance = rotation_jac*rotation_variance*rotation_jac.transpose();
         height_variance += sensor_jac*sensor_variance*sensor_jac.transpose();
 
         _variance(i) = height_variance;
