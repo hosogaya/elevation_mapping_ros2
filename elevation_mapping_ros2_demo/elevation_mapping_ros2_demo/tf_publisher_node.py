@@ -30,7 +30,7 @@ class TfPublisher(Node):
         self.publisher = self.create_publisher(geometry_msgs.PoseWithCovarianceStamped, 'pose_with_covariance', 10)
         
         time.sleep(0.5)
-        self.timer = self.create_timer(0.5, self.timer_callback)
+        self.timer = self.create_timer(0.01, self.timer_callback)
         
     def publish_tf(self):
         stamp = self.get_clock().now()

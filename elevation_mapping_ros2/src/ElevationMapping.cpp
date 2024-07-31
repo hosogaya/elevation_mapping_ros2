@@ -34,6 +34,12 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     {
         RCLCPP_INFO(get_logger(), "Updation by pose message is disable");
     }
+
+    if (use_visibility_clean_up_ && visibility_clean_up_duration_ > 0.0)
+    {
+        auto dt = std::chrono::microseconds(size_t(visibility_clean_up_duration_*1e6));
+        visibility_clean_up_timer_ = create_wall_timer(dt, std::bind(&ElevationMapping::visibilityCleanUpCallback, this));
+    }
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
 
@@ -83,7 +89,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }
     auto e_pc_process = std::chrono::system_clock::now();
     double elapsed_pc_process = std::chrono::duration_cast<std::chrono::milliseconds>(e_pc_process - s_pc_process).count();
-    RCLCPP_INFO(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
+    RCLCPP_DEBUG(get_logger(), "Point Cloud processing time: %lf ms", elapsed_pc_process);
 
     updateMapLocation();
 
@@ -103,20 +109,16 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     }    
     auto e_add = std::chrono::system_clock::now();
     double elapsed_add = std::chrono::duration_cast<std::chrono::milliseconds>(e_add - s_add).count();
-    RCLCPP_INFO(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
+    RCLCPP_DEBUG(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
 
-    if (extract_vaild_area_)
+    if (use_and_publish_fused_map_)
     {
-        GridMap map_pub(map_.getRawMap().getBasicLayers());
-        if (!map_.extractVaildArea(map_.getRawMap(), map_pub)) {
-            RCLCPP_INFO(get_logger(), "Failed to get submap information");
-            return;
-        }
+        map_.fuseAll(); 
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-        message = grid_map::GridMapRosConverter::toMessage(map_pub, std::vector<std::string>{"elevation", "variance"});
+        message = grid_map::GridMapRosConverter::toMessage(map_.getFusedMap(), map_.getFusedMap().getBasicLayers());
         pub_raw_map_->publish(std::move(message));
     }
-    else
+    else 
     {
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
         message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
@@ -125,7 +127,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-    RCLCPP_INFO(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
+    RCLCPP_DEBUG(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
 }
 
 bool ElevationMapping::updateMapLocation()
@@ -194,11 +196,16 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     tf2::fromMsg(pose_msg->pose.pose, transform);
     
     // compute map variacne update from motion prediction
-    RCLCPP_INFO(get_logger(), "Calling RobotMotionUpdater::update");
+    RCLCPP_DEBUG(get_logger(), "Calling RobotMotionUpdater::update");
     robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp);
 
-    RCLCPP_INFO(get_logger(), "Finished RobotMotionUpdater::update");
+    RCLCPP_DEBUG(get_logger(), "Finished RobotMotionUpdater::update");
     return true;
+}
+
+void ElevationMapping::visibilityCleanUpCallback()
+{
+    map_.visibilityCleanup(last_point_cloud_update_time_);
 }
 
 bool ElevationMapping::readParameters()
@@ -206,10 +213,12 @@ bool ElevationMapping::readParameters()
     // elevation mapping
     use_pose_update_ = declare_parameter("use_pose_update", true);
     use_visibility_clean_up_ = declare_parameter("use_visibility_clean_up", true);
+    visibility_clean_up_duration_ = declare_parameter("visibility_clean_up_duration", 1.0);
+    use_and_publish_fused_map_ = declare_parameter("use_and_publish_fused_map", false);
     pose_cache_size_ = declare_parameter("pose_cache_size", 10);
     track_point_frame_id_ = declare_parameter("robot_frame", "/base_link");
-    time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // seconds
-    extract_vaild_area_ = declare_parameter("extract_vaild_area", true);
+    time_tolerance_prediction_ = declare_parameter("time_tolerance_prediction", 0.1); // second
+    // extract_vaild_area_ = declare_parameter("extract_vaild_area", true);
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
     std::string sensor_type, sensor_frame, map_frame, robot_frame;

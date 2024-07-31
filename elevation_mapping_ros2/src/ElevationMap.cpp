@@ -5,27 +5,24 @@ namespace elevation_mapping
 
 ElevationMap::ElevationMap()
     : raw_map_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", 
-        "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"})
+        "time", "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
+      fused_map_({"elevation", "upper_bound", "lower_bound"})
 {
     raw_map_.setBasicLayers({"elevation", "variance"});
+    fused_map_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
     clear();
-
-    system_clock_ = std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME);
-    ros_clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
 
 ElevationMap::~ElevationMap() {}
 
 bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time_stamp, const Eigen::Affine3d& _transform_sensor2map_)
 {
-    const rclcpp::Time method_start_time = system_clock_->now(); 
     // update initial time if it is not initiallized.
     if (initial_time_.seconds() == 0)
     {
         initial_time_ = _time_stamp;
     }
     const rclcpp::Duration scan_time_since_initialization = _time_stamp - initial_time_;
-    const rclcpp::Time current_time = ros_clock_->now();
 
     auto& elevation_layer = raw_map_["elevation"];
     auto& variance_layer = raw_map_["variance"];
@@ -40,12 +37,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     auto& sensor_y_at_lowest_scan_layer = raw_map_["sensor_y_at_lowest_scan"];
     auto& sensor_z_at_lowest_scan_layer = raw_map_["sensor_z_at_lowest_scan"];
 
-    // std::vector<Eigen::Ref<const grid_map::Matrix>> basic_layer;
-    // for (const std::string& layer: raw_map_.getBasicLayers())
-    // {
-    //     basic_layer.emplace_back(raw_map_.get(layer));
-    // }
-
     // for all points
     size_t point_within_map_num = 0;
     for (size_t i=0; i<_point_cloud->size(); ++i)
@@ -57,10 +48,8 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         // Skip if it does not lie within the elevation map
         if (!raw_map_.getIndex(position, index))
         {
-            RCLCPP_DEBUG_THROTTLE(rclcpp::get_logger(logger_name_), *system_clock_, 1, "skip points");
             continue;
         }
-        // if (point.x < -1.0) RCLCPP_INFO(rclcpp::get_logger(logger_name_), "(%f, %f)", point.x, point.y);
         point_within_map_num++;
 
         auto& elevation = elevation_layer(index(0), index(1));
@@ -68,7 +57,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         auto& horizontal_variance_x = horizontal_variance_x_layer(index(0), index(1));
         auto& horizontal_variance_y = horizontal_variance_y_layer(index(0), index(1));
         auto& horizontal_variance_xy = horizontal_variance_xy_layer(index(0), index(1));
-        // auto& color = color_layer(index(0), index(1));
         auto& time = time_layer(index(0), index(1));
         auto& dynaic_time = dynamic_time_layer(index(0), index(1));
         auto& lowest_scan_point = lowest_scan_point_layer(index(0), index(1));
@@ -78,7 +66,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     
         const float point_variance = _variance(i);
         if (std::isnan(point_variance)) continue;
-        // bool is_vaild = std::all_of(basic_layer.begin(), basic_layer.end(), [&](Eigen::Ref<const grid_map::Matrix> layer){return std::isfinite(layer(index(0), index(1)));});
         if (!std::isfinite(elevation) || !std::isfinite(variance))
         {
             elevation = point.z;
@@ -86,7 +73,6 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
             horizontal_variance_x = min_horizontal_variance_;
             horizontal_variance_y = min_horizontal_variance_;
             horizontal_variance_xy = 0.0;
-            // grid_map::colorVectorToValue(point.getRGBVector3i(), color);
             continue;
         }
 
@@ -114,6 +100,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         }
 
         // store lowest points from scan for visibility checking 
+        // sensor position at the time when scans the lowest (min z) point 
         const float point_height_plus_uncertainty = point.z + 3.0*std::sqrt(point_variance); // 3*sigma (99% confidence interval)
         if (std::isnan(lowest_scan_point) || point_height_plus_uncertainty < lowest_scan_point)
         {
@@ -134,7 +121,7 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
 
         // grid_map::colorVectorToValue(point.getRGBVector3i(), color);
         time = scan_time_since_initialization.seconds();
-        dynaic_time = current_time.seconds();
+        dynaic_time = _time_stamp.seconds();
 
         // horizontal varicance are reset
         horizontal_variance_x = min_horizontal_variance_;
@@ -146,15 +133,167 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
 
     clean();
     raw_map_.setTimestamp(_time_stamp.nanoseconds());
-    const rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Raw map has been updated with a new point in %f s", duration.seconds());
+
+    return true;
+}
+
+bool ElevationMap::fuseAll()
+{
+    return fuse(grid_map::Index(0.0), fused_map_.getSize());
+}
+
+    
+bool ElevationMap::fuse(const grid_map::Index& top_left_index, const grid_map::Index& size)
+{
+    if ((size == 0).any()) return false;
+
+    const auto start_time = std::chrono::system_clock::now();
+
+    // Preparation
+    const double half_resolution = fused_map_.getResolution()*0.5;
+    const float minimal_weight = std::numeric_limits<float>::epsilon()*2.0f;
+    const double ellipse_extension = M_SQRT2*fused_map_.getResolution();
+
+    // Check if there is the need to reset out-dated data. 
+    if (fused_map_.getTimestamp() != raw_map_.getTimestamp())
+    {
+        fused_map_.clearAll();
+        fused_map_.resetTimestamp();
+    }
+
+    // Align fused map with raw map
+    if (raw_map_.getPosition() != fused_map_.getPosition())
+    {
+        if (!fused_map_.move(raw_map_.getPosition()))
+        {
+            RCLCPP_WARN(rclcpp::get_logger(logger_name_), "Failed to move fused map to the same position as raw map");
+            return false;
+        }
+        if (!fused_map_.isDefaultStartIndex()) fused_map_.convertToDefaultStartIndex();
+    }
+
+
+    // For each cell is requested area
+    for (grid_map::SubmapIterator iterator(raw_map_, top_left_index, size); 
+        !iterator.isPastEnd(); ++iterator
+    )
+    {
+        // Check if fusion for this cell has already been done earlier
+        if (fused_map_.isValid(*iterator)) continue;
+        // Check source data is valid
+        if (!raw_map_.isValid(*iterator)) continue;
+
+        // Get size of error ellipse
+        const float& sigma_x = raw_map_.at("horizontal_variance_x", *iterator);
+        const float& sigma_y = raw_map_.at("horizontal_variance_y", *iterator);
+        const float& sigma_xy = raw_map_.at("horizontal_variance_xy", *iterator);
+
+        Eigen::Matrix2d covariance_matrix{{sigma_x, sigma_xy}, {sigma_xy, sigma_y}};
+        // 95.45% confidence ellipse which is 2.486-sigma for 2 dof problem.
+        // http://www.reid.ai/2012/09/chi-squared-distribution-table-with.html
+        const double uncertainty_factor{2.486};
+
+        Eigen::EigenSolver<Eigen::Matrix2d> solver(covariance_matrix);
+        Eigen::Array2d eigen_values(solver.eigenvalues().real().cwiseAbs());
+
+        Eigen::Array2d::Index max_eigen_value_index{0};
+        eigen_values.maxCoeff(&max_eigen_value_index);
+        Eigen::Array2d::Index min_eigen_value_index{0};
+        if (max_eigen_value_index == Eigen::Array2d::Index(0)) min_eigen_value_index = 1;
+        else min_eigen_value_index = 0;
+
+        const grid_map::Length ellipse_length = 2.0*uncertainty_factor
+                                            *grid_map::Length(eigen_values(max_eigen_value_index), eigen_values(min_eigen_value_index)).sqrt() 
+                                            + ellipse_extension;
+
+        const double ellipse_rotation = std::atan2(solver.eigenvectors().col(max_eigen_value_index).real()(1),
+                                                solver.eigenvectors().col(max_eigen_value_index).real()(0));
+
+        // requested length and position (center) of submap in map. 
+        grid_map::Position requested_submap_position;
+        raw_map_.getPosition(*iterator, requested_submap_position);
+        
+        // Prepare data fusion
+        grid_map::EllipseIterator ellipse_iterator(raw_map_, requested_submap_position, ellipse_length, ellipse_rotation);
+        const unsigned int max_number_of_cells_to_fuse = ellipse_iterator.getSubmapSize().prod();
+        Eigen::ArrayXf means(max_number_of_cells_to_fuse);
+        Eigen::ArrayXf weights(max_number_of_cells_to_fuse);
+        WeightedEmpiricalCumulativeDistributionFunction<float> lower_bound_distribution;
+        WeightedEmpiricalCumulativeDistributionFunction<float> upper_bound_distribution;    
+
+        float max_standard_deviation = sqrt(eigen_values(max_eigen_value_index));
+        float min_standard_deviation = sqrt(eigen_values(min_eigen_value_index));
+        Eigen::Rotation2Dd rotation_matrix(ellipse_rotation);
+
+        // for each cell in error ellipse
+        size_t i{0};
+        for (; !ellipse_iterator.isPastEnd(); ++ellipse_iterator)
+        {
+            if (!raw_map_.isValid(*ellipse_iterator)) continue;
+
+            means[i] = raw_map_.at("elevation", *ellipse_iterator);
+
+            // Compute weight from probability. 
+            grid_map::Position aubsolute_position;
+            raw_map_.getPosition(*ellipse_iterator, aubsolute_position);
+            Eigen::Vector2d distance_to_center = (rotation_matrix*(aubsolute_position - requested_submap_position)).cwiseAbs();
+
+            float probability1 = cumulativeDistributionFunction(distance_to_center.x() + half_resolution, 0.0, max_standard_deviation)
+                                -cumulativeDistributionFunction(distance_to_center.x() - half_resolution, 0.0, max_standard_deviation);
+            float probability2 = cumulativeDistributionFunction(distance_to_center.y() + half_resolution, 0.0, min_standard_deviation)
+                                -cumulativeDistributionFunction(distance_to_center.y() - half_resolution, 0.0, min_standard_deviation);
+
+            const float weight = std::max(minimal_weight, probability1*probability2);
+            weights[i] = weight;
+
+            const float standard_deviation = std::sqrt(raw_map_.at("variance", *ellipse_iterator));
+            lower_bound_distribution.add(means[i] - 2.0*standard_deviation, weight);
+            upper_bound_distribution.add(means[i] + 2.0*standard_deviation, weight);
+
+            ++i;
+        }
+
+        if (i == 0)
+        {
+            // Nothing to fuse
+            fused_map_.at("elevation", *iterator) = raw_map_.at("elevation", *iterator);
+            fused_map_.at("lower_bound", *iterator) = raw_map_.at("elevation", *iterator) - 2.0*std::sqrt(raw_map_.at("variance", *iterator));
+            fused_map_.at("upper_bound", *iterator) = raw_map_.at("elevation", *iterator) + 2.0*std::sqrt(raw_map_.at("variance", *iterator));
+
+            continue;
+        }
+
+        // Fuse
+        means.conservativeResize(i);
+        weights.conservativeResize(i);
+        float mean = (weights*means).sum()/weights.sum();
+
+        if (!std::isfinite(mean))
+        {
+            RCLCPP_ERROR(rclcpp::get_logger(logger_name_), "Something went wrong when fusing the map");
+            continue;
+        }
+
+        // add to the fused map
+        fused_map_.at("elevation", *iterator) = mean;
+        lower_bound_distribution.compute();
+        upper_bound_distribution.compute();
+        fused_map_.at("lower_bound", *iterator) = lower_bound_distribution.quantile(0.01);
+        fused_map_.at("upper_bound", *iterator) = upper_bound_distribution.quantile(0.99);
+    }
+    fused_map_.setTimestamp(raw_map_.getTimestamp());
+    const auto end_time = std::chrono::system_clock::now();
+    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Map fusing takes %lf [ms]", elapsed);
+
 
     return true;
 }
 
 void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
 {
-    const rclcpp::Time method_start_time = system_clock_->now();
+    auto start = std::chrono::system_clock::now();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Calling visibility clean up");
     const rclcpp::Duration time_since_initialization = _time_stamp - initial_time_;
 
     // copy raw elevation map data
@@ -166,7 +305,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
 
     visibility_clean_up_map_.add("max_height");
     
-    // Create max ehight layer with ray tracing
+    // Create max height layer with ray tracing
     for (grid_map::GridMapIterator iterator(visibility_clean_up_map_); !iterator.isPastEnd(); ++iterator)
     {
         if (!visibility_clean_up_map_.isValid(*iterator)) continue;
@@ -212,6 +351,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
         if (!visibility_clean_up_map_.isValid(*iterator)) continue;
 
         const auto& time = visibility_clean_up_map_.at("time", *iterator);
+        // If the cell has been not scanned in "scannning_duration_", it will be cleared 
         if (time_since_initialization.seconds() - time > scanning_duration_.seconds())
         {
             const auto& elevation = visibility_clean_up_map_.at("elevation", *iterator);
@@ -239,8 +379,9 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
         }
     } // end of remove position
 
-    rclcpp::Duration duration = system_clock_->now() - method_start_time;
-    // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Visibility clean up has been performed in %f s (%ld point)", duration.seconds(), (int)cell_position_to_remove.size());
+    auto end = std::chrono::system_clock::now();
+    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Finished visibility clean up. It takes %lf [ms]", elapsed);
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
@@ -326,6 +467,8 @@ bool ElevationMap::extractVaildArea(const GridMap& _src_map, GridMap& _dst_map)
 void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _resolution, const grid_map::Position& _position)
 {
     raw_map_.setGeometry(_length, _resolution, _position);
+    fused_map_.setGeometry(_length, _resolution, _position);
+    visibility_clean_up_map_.setGeometry(_length, _resolution, _position);
     RCLCPP_DEBUG_STREAM(rclcpp::get_logger(logger_name_), "Elevation map grid resized to " << raw_map_.getSize()(0) << " rows and" << raw_map_.getSize()(1) << "columns."
         << " \n Resolution is " << raw_map_.getResolution() << ".\nLateral length " << raw_map_.getLength()(0) << ". Longitudinal length" << raw_map_.getLength()(1) << ".");
 }
@@ -333,6 +476,8 @@ void ElevationMap::setGeometry(const grid_map::Length& _length, const double& _r
 void ElevationMap::setFrameID(const std::string& _frame_id)
 {
     raw_map_.setFrameId(_frame_id);
+    fused_map_.setFrameId(_frame_id);
+    visibility_clean_up_map_.setFrameId(_frame_id);
 }
 
 const std::string& ElevationMap::getFrameID() const
@@ -343,11 +488,6 @@ const std::string& ElevationMap::getFrameID() const
 const rclcpp::Time ElevationMap::getTimeOfLastUpdate(rcl_clock_type_t type) const 
 {
     return rclcpp::Time(raw_map_.getTimestamp(), type);
-}
-
-GridMap& ElevationMap::getRawMap()  
-{
-    return raw_map_;
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation) {

@@ -173,27 +173,27 @@ install(
 )
 
 # node composition
-add_executable(${PROJECT_NAME}_composition
-  src/composition/compose_nodes.cpp
-)
-ament_target_dependencies(${PROJECT_NAME}_composition
-  rclcpp
-  rclcpp_components
-)
-target_link_libraries(${PROJECT_NAME}_composition
-  ${PROJECT_NAME}
-  ${PROJECT_NAME}_post_processor
-)
+# add_executable(${PROJECT_NAME}_composition
+#   src/composition/compose_nodes.cpp
+# )
+# ament_target_dependencies(${PROJECT_NAME}_composition
+#   rclcpp
+#   rclcpp_components
+# )
+# target_link_libraries(${PROJECT_NAME}_composition
+#   ${PROJECT_NAME}
+#   ${PROJECT_NAME}_post_processor
+# )
 
-target_include_directories(${PROJECT_NAME}_composition
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-install(
-  TARGETS ${PROJECT_NAME}_composition
-  DESTINATION lib/${PROJECT_NAME}
-)
+# target_include_directories(${PROJECT_NAME}_composition
+#   PUBLIC
+#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#     $<INSTALL_INTERFACE:include>
+# )
+# install(
+#   TARGETS ${PROJECT_NAME}_composition
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 install(
   DIRECTORY include/

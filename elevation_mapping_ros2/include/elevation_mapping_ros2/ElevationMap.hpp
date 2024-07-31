@@ -47,7 +47,8 @@ public:
     bool clean(); // cleans the elevation map data to stay within the specified bounds. 
     void move(const grid_map::Position& position);
 
-    // bool fuse(const grid_map::Index& top_left_index, grid_map::Index& size);
+    bool fuseAll();
+    bool fuse(const grid_map::Index& top_left_index, const grid_map::Index& size);
 
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
     bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map);
@@ -60,18 +61,17 @@ public:
     // getter
     const std::string& getFrameID() const;
     const rclcpp::Time getTimeOfLastUpdate(const rcl_clock_type_t type = RCL_ROS_TIME) const;
-    GridMap& getRawMap();
+    GridMap& getRawMap() {return raw_map_;}
+    GridMap& getFusedMap() {return fused_map_;}
 private:
     static float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
-
-    std::shared_ptr<rclcpp::Clock> system_clock_;
-    std::shared_ptr<rclcpp::Clock> ros_clock_;
-    rclcpp::Time last_update_time_;
+    // rclcpp::Time last_update_time_;
     rclcpp::Time initial_time_;
     rclcpp::Time scanning_duration_;
 
     GridMap raw_map_; //
+    GridMap fused_map_; // 
     GridMap visibility_clean_up_map_;
 
     // parameter

@@ -49,17 +49,19 @@ public:
 private:
     // void callbackPointCloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud, const geometry_msgs::msg::PoseWithCovarianceStamped _pose);
     
-    // message_filters::Subscriber<sensor_msgs::msg::PointCloud2> sub_point_cloud_;
     message_filters::Subscriber<geometry_msgs::msg::PoseWithCovarianceStamped> sub_pose_;
     message_filters::Cache<geometry_msgs::msg::PoseWithCovarianceStamped> pose_cache_;
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_raw_map_;
     std::weak_ptr<std::remove_pointer<decltype(pub_raw_map_.get())>::type> captured_pub_raw_map_;
-
-    // message_filters::Synchronizer<message_filters::sync_policies::ApproximateTime
-    //     <sensor_msgs::msg::PointCloud2, geometry_msgs::msg::PoseWithCovarianceStamped>> sync_sub_;
     
     void callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud);
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_point_cloud_;
+
+    // visibility clean up
+    void visibilityCleanUpCallback();
+    rclcpp::TimerBase::SharedPtr visibility_clean_up_timer_;
+    double visibility_clean_up_duration_;
+    bool use_visibility_clean_up_ = true;
 
     // update
     bool updateMapLocation();
@@ -84,13 +86,12 @@ private:
     // parameters
     bool use_pose_update_ = true;
     size_t pose_cache_size_ = 10;
-    bool use_visibility_clean_up_ = true;
+    bool use_and_publish_fused_map_ = false;
 
     std::string track_point_frame_id_ = "base_link"; // /robot
 
     double time_tolerance_prediction_; // seconds
-    bool extract_vaild_area_ = true;
-    // float max_no_update_duration_;
+    // bool extract_vaild_area_ = true;
 };
 
 }

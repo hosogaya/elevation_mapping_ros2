@@ -3,7 +3,9 @@ import os
 from typing import List
 
 import rclpy
+import rclpy.clock
 from rclpy.context import Context
+import rclpy.duration
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 import rclpy.time
@@ -36,7 +38,7 @@ class PcdPublisher(Node):
         # Read more here: 
         # http://wiki.ros.org/rospy/Overview/Publishers%20and%20Subscribers
         self.pcd_publisher = self.create_publisher(sensor_msgs.PointCloud2, 'pcd', 10)
-        timer_period = 1
+        timer_period = 1./11.
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
@@ -45,7 +47,7 @@ class PcdPublisher(Node):
         # name of the frame the point cloud will be represented in. The default
         # (fixed) frame in RViz is called 'map'
         self.pcd = point_cloud(self.points, 'pcd_link')
-        self.pcd.header.stamp = self.get_clock().now().to_msg()
+        self.pcd.header.stamp = (self.get_clock().now()).to_msg()
         # Then I publish the PointCloud2 object 
         self.pcd_publisher.publish(self.pcd)
         

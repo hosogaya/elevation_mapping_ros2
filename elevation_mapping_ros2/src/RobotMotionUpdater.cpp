@@ -26,15 +26,12 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
     grid_map::Matrix horizontal_variance_update_x(size(0), size(1));
     grid_map::Matrix horizontal_variance_update_y(size(0), size(1));
     grid_map::Matrix horizontal_variance_update_xy(size(0), size(1));
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "[RobotMotionUpdater::update] initialized");
-
+    
     // Relative covariance matrix between two robot poses
     ReducedCovariance reduced_covariance; // sigma
     computeReducedCovariance(_pose_transform, _pose_covariance, reduced_covariance);
     ReducedCovariance relative_convariance; // sigma B_tildeB
     computeRelativeCovariance(_pose_transform, reduced_covariance, relative_convariance);
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "[RobotMotionUpdater::update] reduced covariance");
-
 
     Eigen::Matrix3d position_covariance = relative_convariance.topLeftCorner(3,3);
     Eigen::Matrix3d rotation_covariance = Eigen::Matrix3d::Zero();
