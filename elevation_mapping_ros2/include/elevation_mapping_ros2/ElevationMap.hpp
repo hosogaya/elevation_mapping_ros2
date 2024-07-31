@@ -38,7 +38,25 @@ struct VarianceClampOperator
 class ElevationMap
 {
 public:
-    explicit ElevationMap();
+    struct Config
+    {
+        std::string logger_name_ = "ElevationMap";
+        double lateral_length_ = 5.0;
+        double longitudinal_length_ = 5.0;
+        double resolution_ = 0.05;
+        double initial_position_x_ = 0.0;
+        double initial_position_y_ = 0.0;
+        double min_normal_variance_ = 0.005*0.005;
+        double max_nomral_variance_ = 0.1*0.1;
+        double min_horizontal_variance_ = 0.05*0.05/2.0;
+        double max_horizontal_variance_ = 0.5;
+        double mahalanobis_distance_thres_ = 2.5;
+        double scanning_duration_ = 1.0; // second
+        double increase_height_alpha_ = 0.0;
+        double multi_height_noise_ = 0.005*0.005; 
+    };
+
+    explicit ElevationMap(Config config, std::string map_frame);
     ~ElevationMap();
 
     bool add (PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _variance, const rclcpp::Time& _time, const Eigen::Affine3d& _transform_sensor2map_);
@@ -53,8 +71,6 @@ public:
     void visibilityCleanup(const rclcpp::Time& _time_stamp);
     bool extractVaildArea(const GridMap& _src_map, GridMap& _dst_map);
 
-    void readParameters(rclcpp::Node* _node);
-    
     void setGeometry(const grid_map::Length& _length, const double& _resolution, const grid_map::Position& position);
     void setFrameID(const std::string& frame_id);
 
@@ -80,7 +96,7 @@ private:
     float mahalanobis_distance_thres_;
     float increase_height_alpha_; // (0, 1)
     float multi_height_noise_;
-    std::string logger_name_;
+    const std::string logger_name_;
 };
 
 }

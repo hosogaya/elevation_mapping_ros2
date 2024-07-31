@@ -30,6 +30,8 @@
 #include <elevation_mapping_ros2/TypeDef.hpp>
 #include <elevation_mapping_ros2/RobotMotionUpdater.hpp>
 
+#include <elevation_mapping_ros2/ros_parameters.hpp>
+
 #include <pcl/point_cloud.h>
 #include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -54,8 +56,10 @@ private:
     rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_raw_map_;
     std::weak_ptr<std::remove_pointer<decltype(pub_raw_map_.get())>::type> captured_pub_raw_map_;
     
-    void callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud);
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_point_cloud_;
+    void callbackPointcloud(const sensor_msgs::msg::PointCloud2& _point_cloud, const int topic_index);
+    // rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_point_cloud_;
+
+    std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr> sub_point_clouds_;
 
     // visibility clean up
     void visibilityCleanUpCallback();
@@ -79,9 +83,9 @@ private:
     rclcpp::Clock::SharedPtr clock_;
 
     // instances
-    ElevationMap map_;
-    std::shared_ptr<SensorProcessorBase> sensor_processor_;
-    RobotMotionUpdater robot_motion_updater_;
+    std::shared_ptr<ElevationMap> map_;
+    std::vector<std::shared_ptr<SensorProcessorBase>> sensor_processors_;
+    std::shared_ptr<RobotMotionUpdater> robot_motion_updater_;
 
     // parameters
     bool use_pose_update_ = true;

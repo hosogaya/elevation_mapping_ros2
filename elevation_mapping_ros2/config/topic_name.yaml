@@ -1,7 +1,9 @@
 elevation_mapping:
   ros__parameters:
     input:
-      point_cloud: "/point_cloud"
+      point_cloud1: "/point_cloud_perfect"
+      point_cloud2: "/point_cloud_stereo"
+      point_cloud3: "/point_cloud_laser"
       pose_covariance: "/pose_with_covariance"
     output:
       raw_map: raw_elevation_map

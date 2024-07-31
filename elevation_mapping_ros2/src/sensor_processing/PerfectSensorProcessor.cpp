@@ -3,24 +3,20 @@
 
 namespace elevation_mapping
 {
-PerfectSensorProcessor::PerfectSensorProcessor(
-    const std::string _sensor_frame, const std::string _map_frame, const std::string& _robot_frame)
-    : SensorProcessorBase(_sensor_frame, _map_frame, _robot_frame)
-{
-
-}
+PerfectSensorProcessor::PerfectSensorProcessor(CommonConfig config, std::string map_frame, std::string robot_frame)    
+: SensorProcessorBase(config, map_frame, robot_frame)
+{}
 
 PerfectSensorProcessor::~PerfectSensorProcessor() {}
 
 bool PerfectSensorProcessor::filterSensorType(PointCloudType::Ptr _point_cloud)
 {
-
     return true;
 }
 
 void PerfectSensorProcessor::computeVariance(const PointCloudType::Ptr _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance, Eigen::VectorXf& _variance)
 {
-_variance.resize(_point_cloud->size());
+    _variance.resize(_point_cloud->size());
 
     // projection vector
     const Eigen::RowVector3f projection_vector = Eigen::RowVector3f::UnitZ();
@@ -59,15 +55,6 @@ _variance.resize(_point_cloud->size());
         _variance(i) = height_variance;
         assert( _variance(i) >= 0.0 && "Variance of point cloud is lower than 0");
     }
-}
-
-void PerfectSensorProcessor::readParameters(rclcpp::Node* _node)
-{
-    param_voxel_grid_fitler_.use_filter = _node->declare_parameter("sensor.use_voxel_filter", true);
-    param_voxel_grid_fitler_.leaf_size = _node->declare_parameter("sensor.voxel_leaf_size", 5.0);
-    param_pass_through_filter_.lower_threshold_ = _node->declare_parameter("sensor.pass_filter_lower_threshold", -std::numeric_limits<double>::infinity());
-    param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("sensor.pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
-    logger_name_ = _node->declare_parameter("sensor.logger_name", "PerfectSensorProcessor");
 }
 
 }

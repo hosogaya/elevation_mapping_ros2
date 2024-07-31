@@ -2,9 +2,13 @@
 
 namespace elevation_mapping
 {
-LaserSensorProcessor::LaserSensorProcessor(const std::string& _sensor_frame, const std::string& _map_frame, const std::string& _robot_frame)
-:  SensorProcessorBase(_sensor_frame, _map_frame, _robot_frame)
-{}
+LaserSensorProcessor::LaserSensorProcessor(CommonConfig common_config, LaserSensorConfig laser_config, std::string map_frame, std::string robot_frame)
+:  SensorProcessorBase(common_config, map_frame, robot_frame)
+{
+    min_radius_square_ = laser_config.min_radius_*laser_config.min_radius_;
+    beam_angle_ = laser_config.beam_angle_;
+    beam_constant_ = laser_config.beam_constant_;
+}
 
 LaserSensorProcessor::~LaserSensorProcessor() {}
 
@@ -60,20 +64,6 @@ void LaserSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clou
         _variance(i) = height_variance;
         assert( _variance(i) >= 0.0 && "Variance of point cloud is lower than 0");
     }
-}
-
-void LaserSensorProcessor::readParameters(rclcpp::Node* _node)
-{
-    param_voxel_grid_fitler_.use_filter = _node->declare_parameter("sensor.use_voxel_filter", true);
-    param_voxel_grid_fitler_.leaf_size = _node->declare_parameter("sensor.voxel_leaf_size", 5.0);
-    param_pass_through_filter_.lower_threshold_ = _node->declare_parameter("sensor.pass_filter_lower_threshold", -std::numeric_limits<double>::infinity());
-    param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("sensor.pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
-    logger_name_ = _node->declare_parameter("sensor.logger_name", "LaserSensorProcessor");
-
-    min_radius_square_ = _node->declare_parameter("sensor.laser_min_radius", 0.02);
-    min_radius_square_ *= min_radius_square_;
-    beam_angle_ = _node->declare_parameter("sensor.laser_beam_angle", 0.0006);
-    beam_constant_ = _node->declare_parameter("sensor.laser_beam_constant", 0.0015); 
 }
 
 }

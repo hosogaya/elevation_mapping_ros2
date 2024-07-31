@@ -16,10 +16,6 @@ from tf2_ros.transform_broadcaster import TransformBroadcaster
 class TfPublisher(Node):
     def __init__(self):
         super().__init__('static_transform_publisher')
-        self.declare_parameter("map_frame", "map")
-        self.declare_parameter("robot_frame", "base_link")
-        self.declare_parameter("sensor_frame", "camera_link")
-        self.declare_parameter("pcd_frame", "pcd_link")
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -37,8 +33,8 @@ class TfPublisher(Node):
         # publish transform from map to robot
         pcd2robot = geometry_msgs.TransformStamped()
         pcd2robot.header.stamp = stamp.to_msg()
-        pcd2robot.header.frame_id = self.get_parameter("pcd_frame").get_parameter_value().string_value
-        pcd2robot.child_frame_id = self.get_parameter("robot_frame").get_parameter_value().string_value
+        pcd2robot.header.frame_id = "pcd_link"
+        pcd2robot.child_frame_id = "base_link"
         pcd2robot.transform.translation.x = 2.0
         pcd2robot.transform.translation.y = 5.0# + 0.2*float(duration.nanoseconds) / 1e9
         pcd2robot.transform.translation.z = 0.0
@@ -51,24 +47,51 @@ class TfPublisher(Node):
         
         
         # publish transform from robot to sensor
-        robot2sensor = geometry_msgs.TransformStamped()
-        robot2sensor.header.stamp = stamp.to_msg()
-        robot2sensor.header.frame_id = self.get_parameter("robot_frame").get_parameter_value().string_value
-        robot2sensor.child_frame_id = self.get_parameter("sensor_frame").get_parameter_value().string_value
-        robot2sensor.transform.translation.x = 0.2
-        robot2sensor.transform.translation.y = 0.0
-        robot2sensor.transform.translation.z = 0.1
-        robot2sensor.transform.rotation.x = 0.0
-        robot2sensor.transform.rotation.y = 0.0
-        robot2sensor.transform.rotation.z = 0.0
-        robot2sensor.transform.rotation.w = 1.0
-        
-        self.tf_broadcaster.sendTransform(robot2sensor)
+        robot2perfect = geometry_msgs.TransformStamped()
+        robot2perfect.header.stamp = stamp.to_msg()
+        robot2perfect.header.frame_id = "base_link"
+        robot2perfect.child_frame_id = "perfect_camera_link"
+        robot2perfect.transform.translation.x = 0.2
+        robot2perfect.transform.translation.y = 0.0
+        robot2perfect.transform.translation.z = 0.1
+        robot2perfect.transform.rotation.x = 0.0
+        robot2perfect.transform.rotation.y = 0.0
+        robot2perfect.transform.rotation.z = 0.0
+        robot2perfect.transform.rotation.w = 1.0
+        self.tf_broadcaster.sendTransform(robot2perfect)
+
+        robot2stereo = geometry_msgs.TransformStamped()
+        robot2stereo.header.stamp = stamp.to_msg()
+        robot2stereo.header.frame_id = "base_link"
+        robot2stereo.child_frame_id = "stereo_camera_link"
+        robot2stereo.transform.translation.x = 0.2
+        robot2stereo.transform.translation.y = 0.0
+        robot2stereo.transform.translation.z = 0.2
+        robot2stereo.transform.rotation.x = 0.0
+        robot2stereo.transform.rotation.y = 0.0
+        robot2stereo.transform.rotation.z = 0.0
+        robot2stereo.transform.rotation.w = 1.0
+        self.tf_broadcaster.sendTransform(robot2stereo)
+
+
+        robot2laser = geometry_msgs.TransformStamped()
+        robot2laser.header.stamp = stamp.to_msg()
+        robot2laser.header.frame_id = "base_link"
+        robot2laser.child_frame_id = "laser_link"
+        robot2laser.transform.translation.x = 0.2
+        robot2laser.transform.translation.y = 0.0
+        robot2laser.transform.translation.z = 0.0
+        robot2laser.transform.rotation.x = 0.0
+        robot2laser.transform.rotation.y = 0.0
+        robot2laser.transform.rotation.z = 0.0
+        robot2laser.transform.rotation.w = 1.0
+        self.tf_broadcaster.sendTransform(robot2laser)
+
         
         map2pcd = geometry_msgs.TransformStamped()
         map2pcd.header.stamp = stamp.to_msg()
-        map2pcd.header.frame_id = self.get_parameter("map_frame").get_parameter_value().string_value
-        map2pcd.child_frame_id = self.get_parameter("pcd_frame").get_parameter_value().string_value
+        map2pcd.header.frame_id = "map"
+        map2pcd.child_frame_id = "pcd_link"
         map2pcd.transform.translation.x = 0.0
         map2pcd.transform.translation.y = 0.0
         map2pcd.transform.translation.z = 3.0
@@ -84,8 +107,8 @@ class TfPublisher(Node):
         
     def timer_callback(self):        
         # publish pose with covariance stamped msg
-        target_frame = self.get_parameter("robot_frame").get_parameter_value().string_value
-        origin_frame = self.get_parameter("map_frame").get_parameter_value().string_value
+        target_frame = "base_link"
+        origin_frame = "map"
         try:
             transform: geometry_msgs.TransformStamped = self.tf_buffer.lookup_transform(
                 origin_frame, target_frame, self.last_publish_time

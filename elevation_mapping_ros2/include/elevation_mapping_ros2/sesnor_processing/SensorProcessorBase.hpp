@@ -33,14 +33,24 @@ namespace elevation_mapping
 {
 class SensorProcessorBase
 {
-public: 
-    SensorProcessorBase(const std::string& _sensor_frame, const std::string& _map_frame, const std::string& _robot_frame);
+public:
+    struct CommonConfig
+    {
+        std::string sensor_frame_ = "lidar";
+        // std::string point_cloud_topic_name_ = "/point_cloud";
+
+        std::string logger_name_ = "SensorProcessor";
+        bool use_voxel_filter_ = false;
+        double voxel_leaf_size_ = 0.05; // mm
+        double pass_filter_lower_threshold_ = std::numeric_limits<double>::min();
+        double pass_filter_upper_threshold_ = std::numeric_limits<double>::max();
+    };
+    SensorProcessorBase(CommonConfig config, std::string map_frame, std::string robot_frame);
     ~SensorProcessorBase();
 
-    bool process(const sensor_msgs::msg::PointCloud2::UniquePtr& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
+    bool process(const sensor_msgs::msg::PointCloud2& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance , PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance);
     bool isFirstTfAvailable() const {return first_tf_available_;}
     const Eigen::Affine3d& getTransformSensor2Map() {return transform_sensor2map_;}
-    virtual void readParameters(rclcpp::Node* _node) = 0;
 protected:
     bool updateTransformations();
     bool transformPointCloud(const PointCloudType& _point_cloud, PointCloudType::Ptr& _trnasformed_point_cloud, const std::string& _target_frame);
@@ -75,16 +85,12 @@ protected:
     tf2::TimePoint current_time_point_;
 
     // option
-    struct {
-        bool use_filter = false;
-        double leaf_size = 20.0; // mm
-    } param_voxel_grid_fitler_;
+    bool use_voxel_filter_ = false;
+    double voxel_leaf_size_ = 20.0; // mm
 
-    struct {
-        double lower_threshold_ = -std::numeric_limits<double>::infinity(); // relative to map frame
-        double upper_threshold_ = std::numeric_limits<double>::infinity();
-    } param_pass_through_filter_;
+    double pass_throught_lower_threshold_ = -std::numeric_limits<double>::infinity(); // relative to robot frame
+    double pass_throught_upper_threshold_ = std::numeric_limits<double>::infinity();
 
-    std::string logger_name_ = "SensorProcessor";
+    const std::string logger_name_ = "SensorProcessor";
 };
 }

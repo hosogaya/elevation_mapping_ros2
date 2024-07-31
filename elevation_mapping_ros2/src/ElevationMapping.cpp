@@ -9,14 +9,35 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     : rclcpp::Node("elevation_mapping", options)
 {
     readParameters();
+
+    RCLCPP_INFO(get_logger(), "Finished reading parameters");
     // create tf listener
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
     // subscriber
-    sub_point_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
-    );
+    // sub_point_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+    //     // "input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
+    //     "input/point_cloud", rclcpp::QoS(10), 
+    //     [this](const sensor_msgs::msg::PointCloud2::UniquePtr msg)->void
+    //     {
+    //         RCLCPP_INFO(get_logger(), "Calling point cloud");
+    //         this->callbackPointcloud(*msg, 1);
+    //     }
+    // );
+
+    for (int i=0; i<sensor_processors_.size(); ++i)
+    {
+        sub_point_clouds_.push_back(
+            this->create_subscription<sensor_msgs::msg::PointCloud2>(
+                "input/point_cloud"+std::to_string(i+1), rclcpp::QoS(10), 
+                [this, i](const sensor_msgs::msg::PointCloud2::UniquePtr msg) ->void
+                {
+                    this->callbackPointcloud(*msg, i);
+                }
+            )
+        );
+    }
 
     pub_raw_map_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
         "output/raw_map", 10
@@ -45,10 +66,11 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
 
 ElevationMapping::~ElevationMapping() {}
 
-void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::UniquePtr _point_cloud)
+void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2& _point_cloud, const int topic_index)
 {
+    RCLCPP_DEBUG(get_logger(), "Calling callback point cloud No. %d", topic_index);
     std::chrono::system_clock::time_point begin = std::chrono::system_clock::now();
-    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud->header.stamp);
+    last_point_cloud_update_time_ = rclcpp::Time(_point_cloud.header.stamp);
 
     Eigen::Matrix<double, 6, 6> robot_pose_covariance;
     robot_pose_covariance.setZero();
@@ -74,9 +96,9 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
     auto s_pc_process = std::chrono::system_clock::now();
     PointCloudType::Ptr point_cloud_map_frame(new PointCloudType);
     Eigen::VectorXf height_variance;
-    if (!sensor_processor_->process(_point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
+    if (!sensor_processors_[topic_index]->process(_point_cloud, robot_pose_covariance, point_cloud_map_frame, height_variance))
     {
-        if (!sensor_processor_->isFirstTfAvailable())
+        if (!sensor_processors_[topic_index]->isFirstTfAvailable())
         {
             RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 10, "Waiting for tf transformation to be available. (Message is throttled. 10s)");
             return;
@@ -101,7 +123,7 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     // add point cloud to elevation map
     auto s_add = std::chrono::system_clock::now();
-    if (!map_.add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processor_->getTransformSensor2Map()))
+    if (!map_->add(point_cloud_map_frame, height_variance, last_point_cloud_update_time_, sensor_processors_[topic_index]->getTransformSensor2Map()))
     {
         RCLCPP_ERROR(get_logger(), "Adding point cloud to elevation map failed");
         // reset map update timer
@@ -113,15 +135,15 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2::U
 
     if (use_and_publish_fused_map_)
     {
-        map_.fuseAll(); 
+        map_->fuseAll(); 
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-        message = grid_map::GridMapRosConverter::toMessage(map_.getFusedMap(), map_.getFusedMap().getBasicLayers());
+        message = grid_map::GridMapRosConverter::toMessage(map_->getFusedMap(), map_->getFusedMap().getBasicLayers());
         pub_raw_map_->publish(std::move(message));
     }
     else 
     {
         grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-        message = grid_map::GridMapRosConverter::toMessage(map_.getRawMap(), std::vector<std::string>{"elevation", "variance"});
+        message = grid_map::GridMapRosConverter::toMessage(map_->getRawMap(), std::vector<std::string>{"elevation", "variance"});
         pub_raw_map_->publish(std::move(message));
     }
 
@@ -146,8 +168,8 @@ bool ElevationMapping::updateMapLocation()
     try
     {
         // get transformed track point (map to track point)
-        // transformed_track_point = tf_buffer_->transform(track_point, map_.getFrameID(), tf2::durationFromSec(1.0));
-        transformed_track_point = tf_buffer_->lookupTransform(map_.getFrameID(), track_point_frame_id_, tf2::TimePointZero);
+        // transformed_track_point = tf_buffer_->transform(track_point, map_->getFrameID(), tf2::durationFromSec(1.0));
+        transformed_track_point = tf_buffer_->lookupTransform(map_->getFrameID(), track_point_frame_id_, tf2::TimePointZero);
     }
     catch(const tf2::TransformException& e)
     {
@@ -158,21 +180,21 @@ bool ElevationMapping::updateMapLocation()
 
     grid_map::Position position(transformed_track_point.transform.translation.x, transformed_track_point.transform.translation.y);
     // move map to the position
-    map_.move(position);
+    map_->move(position);
     return true;
 }   
 
 bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 {
     if (!use_pose_update_) return true;
-    if (time_tolerance_prediction_ + _time_stamp.seconds() < map_.getTimeOfLastUpdate().seconds())
+    if (time_tolerance_prediction_ + _time_stamp.seconds() < map_->getTimeOfLastUpdate().seconds())
     {
-        RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
+        RCLCPP_ERROR(get_logger(), "Requested update with time stamp %f, but time of last update was %f.", _time_stamp.seconds(), map_->getTimeOfLastUpdate().seconds());
         return false;
     }
-    else if (_time_stamp < map_.getTimeOfLastUpdate(RCL_ROS_TIME))
+    else if (_time_stamp < map_->getTimeOfLastUpdate(RCL_ROS_TIME))
     {
-        RCLCPP_DEBUG(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_.getTimeOfLastUpdate().seconds());
+        RCLCPP_DEBUG(get_logger(), "Requested update with time stamp %f, but time of last update was %f. Ignore update", _time_stamp.seconds(), map_->getTimeOfLastUpdate().seconds());
         return true;
     }
 
@@ -197,7 +219,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
     
     // compute map variacne update from motion prediction
     RCLCPP_DEBUG(get_logger(), "Calling RobotMotionUpdater::update");
-    robot_motion_updater_.update(map_, transform, pose_covariance, _time_stamp);
+    robot_motion_updater_->update(*map_, transform, pose_covariance, _time_stamp);
 
     RCLCPP_DEBUG(get_logger(), "Finished RobotMotionUpdater::update");
     return true;
@@ -205,7 +227,7 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 
 void ElevationMapping::visibilityCleanUpCallback()
 {
-    map_.visibilityCleanup(last_point_cloud_update_time_);
+    map_->visibilityCleanup(last_point_cloud_update_time_);
 }
 
 bool ElevationMapping::readParameters()
@@ -221,30 +243,37 @@ bool ElevationMapping::readParameters()
     // extract_vaild_area_ = declare_parameter("extract_vaild_area", true);
     // declare_parameter("max_no_update_duration", max_no_update_duration_, 0.5);
 
-    std::string sensor_type, sensor_frame, map_frame, robot_frame;
-    sensor_frame = declare_parameter("sensor_frame", "/sensor");
+    std::string map_frame, robot_frame;
     map_frame = declare_parameter("map_frame", "/map");
     robot_frame = track_point_frame_id_;
-    map_.setFrameID(map_frame);
-    sensor_type = declare_parameter("sensor.type", "perfect");
-    if (sensor_type == "perfect") sensor_processor_ = std::make_shared<PerfectSensorProcessor>(sensor_frame, map_frame, robot_frame);
-    else if (sensor_type == "stereo") 
+
+    for (size_t i=1; i > sensor_processors_.size(); ++i)
     {
-        sensor_processor_ = std::make_shared<StereoSensorProcessor>(sensor_frame, map_frame, robot_frame);
-    }
-    else if (sensor_type == "laser")
-    {
-        sensor_processor_ = std::make_shared<LaserSensorProcessor>(sensor_frame, map_frame, robot_frame);
-    }
-    else 
-    {
-        RCLCPP_ERROR(get_logger(), "The sensor type %s is invailed", sensor_type.c_str());
-        return false;
+        std::string prefix = "sensors.sensor"+std::to_string(i) + ".";
+        std::string sensor_type = declare_parameter(prefix + "sensor_type", "");
+        if (sensor_type == "perfect") 
+        {
+            auto common_config = getSensorProcessorConfig(get_node_logging_interface(), get_node_parameters_interface(), prefix);
+            sensor_processors_.push_back(std::make_shared<PerfectSensorProcessor>(common_config, map_frame, robot_frame));
+        }
+        else if (sensor_type == "stereo") 
+        {
+            auto common_config = getSensorProcessorConfig(get_node_logging_interface(), get_node_parameters_interface(), prefix);
+            auto stereo_config = getStereoSensorConfig(get_node_logging_interface(), get_node_parameters_interface(), prefix);
+            sensor_processors_.push_back(std::make_shared<StereoSensorProcessor>(common_config, stereo_config, map_frame, robot_frame));
+        }
+        else if (sensor_type == "laser")
+        {
+            auto common_config = getSensorProcessorConfig(get_node_logging_interface(), get_node_parameters_interface(), prefix);
+            auto laser_config = getLaserSensorConfig(get_node_logging_interface(), get_node_parameters_interface(), prefix);
+            sensor_processors_.push_back(std::make_shared<LaserSensorProcessor>(common_config, laser_config, map_frame, robot_frame));
+        }
+        else break;
     }
 
-    map_.readParameters(this);
-    sensor_processor_->readParameters(this);
+    RCLCPP_DEBUG(get_logger(), "Constructed %lu sensor_processors", sensor_processors_.size());
 
+    map_ = std::make_shared<ElevationMap>(getElevationMapConfig(get_node_logging_interface(), get_node_parameters_interface()), map_frame);
 
     return true;
 }

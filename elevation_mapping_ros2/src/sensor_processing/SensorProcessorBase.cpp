@@ -3,10 +3,15 @@
 namespace elevation_mapping
 {
 
-SensorProcessorBase::SensorProcessorBase(
-    const std::string& _sensor_frame, const std::string& _map_frame, const std::string& _robot_frame)
-    : kSensorFrameID_(_sensor_frame), kMapFrameID_(_map_frame), kRobotFrameID_(_robot_frame)
+SensorProcessorBase::SensorProcessorBase(CommonConfig config, std::string map_frame, std::string robot_frame)
+    : kSensorFrameID_(config.sensor_frame_), kMapFrameID_(map_frame), 
+    kRobotFrameID_(robot_frame), logger_name_(config.logger_name_)
 {
+    use_voxel_filter_ = config.use_voxel_filter_;
+    voxel_leaf_size_ = config.voxel_leaf_size_;
+    pass_throught_lower_threshold_ = config.pass_filter_lower_threshold_;
+    pass_throught_upper_threshold_ = config.pass_filter_upper_threshold_;
+
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(clock_);
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);   
@@ -14,11 +19,11 @@ SensorProcessorBase::SensorProcessorBase(
 
 SensorProcessorBase::~SensorProcessorBase() {}
 
-bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2::UniquePtr& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance,  PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance)
+bool SensorProcessorBase::process(const sensor_msgs::msg::PointCloud2& _point_cloud, const Eigen::Matrix<double, 6, 6>& _robot_covariance,  PointCloudType::Ptr& _processed_point_cloud_map_frame, Eigen::VectorXf& _variance)
 {
     PointCloudType point_cloud;
-    pcl::fromROSMsg(*_point_cloud, point_cloud);
-    current_time_point_ = tf2_ros::fromMsg(_point_cloud->header.stamp);
+    pcl::fromROSMsg(_point_cloud, point_cloud);
+    current_time_point_ = tf2_ros::fromMsg(_point_cloud.header.stamp);
     // RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Input point cloud size: %ld", point_cloud.points.size());
     
     auto s_transform = std::chrono::system_clock::now();
@@ -126,12 +131,12 @@ bool SensorProcessorBase::removeNans(PointCloudType::Ptr _point_cloud)
 
 bool SensorProcessorBase::reducePoint(PointCloudType::Ptr _point_cloud)
 {
-    if (param_voxel_grid_fitler_.use_filter)
+    if (use_voxel_filter_)
     {
         PointCloudType temp_point_cloud;
         pcl::VoxelGrid<PointType> voxel_grid_filter;
         voxel_grid_filter.setInputCloud(_point_cloud);
-        voxel_grid_filter.setLeafSize(param_voxel_grid_fitler_.leaf_size, param_voxel_grid_fitler_.leaf_size, param_voxel_grid_fitler_.leaf_size);
+        voxel_grid_filter.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
         voxel_grid_filter.filter(temp_point_cloud);
         _point_cloud->swap(temp_point_cloud);
         return true;
@@ -141,18 +146,19 @@ bool SensorProcessorBase::reducePoint(PointCloudType::Ptr _point_cloud)
 
 bool SensorProcessorBase::removeOutsideLimits(const PointCloudType::Ptr& _reference, std::vector<PointCloudType::Ptr>& _point_clouds)
 {
-    if (!std::isfinite(param_pass_through_filter_.lower_threshold_) && !std::isfinite(param_pass_through_filter_.upper_threshold_))
+    if (!std::isfinite(pass_throught_lower_threshold_) && !std::isfinite(pass_throught_upper_threshold_))
     {
         RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "pass through filter is not applied");
         return true;
     }
-    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base", param_pass_through_filter_.lower_threshold_, param_pass_through_filter_.upper_threshold_);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Limiting point cloud to the height interval of [%lf, %lf] relative to the robot base"
+                , pass_throught_lower_threshold_, pass_throught_upper_threshold_);
 
     pcl::PassThrough<PointType> pass_through_filter(true);
     pass_through_filter.setInputCloud(_reference);
     pass_through_filter.setFilterFieldName("z");
-    double lower = translation_map2base_.z() + param_pass_through_filter_.lower_threshold_;
-    double upper = translation_map2base_.z() + param_pass_through_filter_.upper_threshold_;
+    double lower = translation_map2base_.z() + pass_throught_lower_threshold_;
+    double upper = translation_map2base_.z() + pass_throught_upper_threshold_;
     pass_through_filter.setFilterLimits(lower, upper);
     pcl::IndicesPtr inside_indeces(new std::vector<int>);
     pass_through_filter.filter(*inside_indeces);

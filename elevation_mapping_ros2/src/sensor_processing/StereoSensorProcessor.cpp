@@ -3,10 +3,13 @@
 
 namespace elevation_mapping
 {
-StereoSensorProcessor::StereoSensorProcessor(const std::string& _sensor_frame, const std::string& _map_frame, const std::string& _robot_frame)
-    : SensorProcessorBase(_sensor_frame, _map_frame, _robot_frame)
+StereoSensorProcessor::StereoSensorProcessor(CommonConfig common_config, StereoSensorConfig stereo_config, std::string map_frame, std::string robot_frame)
+    : SensorProcessorBase(common_config, map_frame, robot_frame)
 {
-
+    depth_lower_limit_ = stereo_config.depth_lower_limit_;
+    depth_upper_limit_ = stereo_config.depth_upper_limit_;
+    coef_lateral_variance_ = stereo_config.coef_lateral_variance_;
+    coef_normal_variance_ = stereo_config.coef_normal_variance_;
 }
 
 StereoSensorProcessor::~StereoSensorProcessor() {}
@@ -68,20 +71,6 @@ void StereoSensorProcessor::computeVariance(const PointCloudType::Ptr _point_clo
         _variance(i) = height_variance;
         assert( _variance(i) >= 0.0 && "Variance of point cloud is lower than 0");
     }
-}
-
-void StereoSensorProcessor::readParameters(rclcpp::Node* _node)
-{
-    param_voxel_grid_fitler_.use_filter = _node->declare_parameter("sensor.use_voxel_filter", true);
-    param_voxel_grid_fitler_.leaf_size = _node->declare_parameter("sensor.voxel_leaf_size", 5.0);
-    param_pass_through_filter_.lower_threshold_ = _node->declare_parameter("sensor.pass_filter_lower_threshold", -std::numeric_limits<double>::infinity());
-    param_pass_through_filter_.upper_threshold_ = _node->declare_parameter("sensor.pass_filter_upper_threshold", std::numeric_limits<double>::infinity());
-    logger_name_ = _node->declare_parameter("sensor.logger_name", "StereoSensorProcessor");
-
-    depth_upper_limit_ = _node->declare_parameter("sensor.depth_upper_limit", 20.0);
-    depth_lower_limit_ = _node->declare_parameter("sensor.depth_lower_limit", 0.1);
-    coef_normal_variance_ = _node->declare_parameter("sensor.coef_normal_variance", 0.0001); 
-    coef_lateral_variance_ = _node->declare_parameter("sensor.coef_lateral_variance", 0.0001);
 }
 
 }

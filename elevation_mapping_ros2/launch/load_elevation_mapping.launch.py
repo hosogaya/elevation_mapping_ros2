@@ -27,10 +27,11 @@ def launch_setup(context, *args, **kwargs):
                 extra_arguments=[{"use_intra_process_comms": True}],
                 parameters=[param], 
                 remappings=[
-                    ("input/point_cloud", topic_name["input"]["point_cloud"]), 
+                    ("input/point_cloud1", topic_name["input"]["point_cloud1"]), 
+                    ("input/point_cloud2", topic_name["input"]["point_cloud2"]), 
+                    ("input/point_cloud3", topic_name["input"]["point_cloud3"]), 
                     ("input/pose", topic_name["input"]["pose_covariance"]), 
                     ("output/raw_map", topic_name["output"]["raw_map"]), 
-                
                 ],
             ),
         ],

@@ -3,7 +3,6 @@ elevation_mapping:
     # frame IDs
     map_frame: "map"
     robot_frame: "base_link"
-    sensor_frame: "camera_link"
     # pose update
     use_pose_update: false
     pose_cache_size: 10
@@ -13,8 +12,8 @@ elevation_mapping:
     # extract_vaild_area: false
     use_and_publish_fused_map: false
 
-    # grid map
-    grid_map:
+
+    elevation_map:
       logger_name: "ElevationMap"
       lateral_length: 10.0
       longitudinal_length: 10.0
@@ -31,36 +30,40 @@ elevation_mapping:
       increase_height_alpha: 0.1
 
     # sensor processing
-    sensor:
-      logger_name: PerfectSensorProcessor
-      type: "perfect"
-      use_voxel_filter: true
-      voxel_leaf_size: 0.05
-      pass_filter_lower_threshold: -100.0 # -infinity
-      pass_filter_upper_threshold: 0.4
+    sensors:
+      sensor1:
+        sensor_type: "perfect"
+        sensor_frame: "perfect_camera_link"
+        logger_name: PerfectSensorProcessor1
+        use_voxel_filter: true
+        voxel_leaf_size: 0.05
+        pass_filter_lower_threshold: -100.0 # -infinity
+        pass_filter_upper_threshold: 2.0
 
-    # sensor:
-      # logger_name: StereoSensorProcessor
-      # type: "stereo"
-      # use_voxel_filter: false
-      # voxel_leaf_size: 0.05
-      # pass_filter_lower_threshold: -100.0 # -infinity
-      # pass_filter_upper_threshold: 0.4
-      # depth_upper_limit: 20.0
-      # depth_lower_limit: 0.1
-      # coef_normal_variance: 0.0001
-      # coef_lateral_variance: 0.0001
+      sensor2:
+        sensor_type: "stereo"
+        sensor_frame: "stereo_camera_link"
+        logger_name: StereoSensorProcessor2
+        use_voxel_filter: true
+        voxel_leaf_size: 0.05
+        pass_filter_lower_threshold: -100.0 # -infinity
+        pass_filter_upper_threshold: 2.0
+        depth_upper_limit: 20.0
+        depth_lower_limit: 0.1
+        coef_normal_variance: 0.0001
+        coef_lateral_variance: 0.0001
 
-    # sensor:
-    #   logger_name: LaserSensorProcessor
-    #   type: "laser"
-    #   use_voxel_filter: true
-    #   voxel_leaf_size: 0.05
-    #   pass_filter_lower_threshold: -100.0 # -infinity
-    #   pass_filter_upper_threshold: 2.0
-    #   laser_min_radius: 0.02
-    #   laser_beam_angle: 0.0006
-    #   laser_beam_constant: 0.0015
+      sensor3:
+        sensor_type: "laser"
+        sensor_frame: "laser_link"
+        logger_name: LaserSensorProcessor3
+        use_voxel_filter: true
+        voxel_leaf_size: 0.05
+        pass_filter_lower_threshold: -100.0 # -infinity
+        pass_filter_upper_threshold: 2.0
+        laser_min_radius: 0.02
+        laser_beam_angle: 0.0006
+        laser_beam_constant: 0.0015
 
     robot_motion_updater:
       logger_name: RobotMotionUpdater
