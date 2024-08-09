@@ -156,19 +156,10 @@ bool ElevationMapping::updateMapLocation()
 {
     RCLCPP_DEBUG(this->get_logger(), "Elevation map is checked for relocalization");
 
-    geometry_msgs::msg::TransformStamped track_point;
-    track_point.header.frame_id = track_point_frame_id_;
-    track_point.header.stamp.sec = rclcpp::Time(0).seconds();
-    track_point.header.stamp.nanosec = rclcpp::Time(0).nanoseconds();
-    track_point.transform.translation.x = 0.0;
-    track_point.transform.translation.y = 0.0;
-    track_point.transform.translation.z = 0.0;
-
     geometry_msgs::msg::TransformStamped transformed_track_point;
     try
     {
         // get transformed track point (map to track point)
-        // transformed_track_point = tf_buffer_->transform(track_point, map_->getFrameID(), tf2::durationFromSec(1.0));
         transformed_track_point = tf_buffer_->lookupTransform(map_->getFrameID(), track_point_frame_id_, tf2::TimePointZero);
     }
     catch(const tf2::TransformException& e)
