@@ -80,11 +80,11 @@ class TfPublisher(Node):
         robot2laser.child_frame_id = "laser_link"
         robot2laser.transform.translation.x = 0.2
         robot2laser.transform.translation.y = 0.0
-        robot2laser.transform.translation.z = 0.0
+        robot2laser.transform.translation.z = 2.0
         robot2laser.transform.rotation.x = 0.0
-        robot2laser.transform.rotation.y = 0.0
+        robot2laser.transform.rotation.y = np.sin(np.pi/4.0)
         robot2laser.transform.rotation.z = 0.0
-        robot2laser.transform.rotation.w = 1.0
+        robot2laser.transform.rotation.w = np.cos(np.pi/4.0)
         self.tf_broadcaster.sendTransform(robot2laser)
 
         

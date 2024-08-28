@@ -64,7 +64,7 @@ void PostProcessor::callbackGridMap(const grid_map_msgs::msg::GridMap::UniquePtr
 
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-    // RCLCPP_INFO(get_logger(), "post processing time: %lf", elapsed);
+    RCLCPP_DEBUG(get_logger(), "post processing time: %lf", elapsed);
 }
 }
 

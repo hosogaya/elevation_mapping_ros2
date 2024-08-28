@@ -55,18 +55,18 @@ endif()
 
 
 set(dependencies
+  rclcpp
+  rclcpp_components
   grid_map_msgs
   grid_map_core
   grid_map_ros
+  geometry_msgs
+  filters
   grid_map_filters
   grid_map_cv
-  rclcpp
-  rclcpp_components
-  geometry_msgs
   tf2_eigen
   tf2_ros
   tf2
-  filters
   message_filters
   pcl_msgs
 )
@@ -151,7 +151,7 @@ install(
 add_library(${PROJECT_NAME}_post_processor SHARED
   src/post_processing/PostProcessor.cpp
 )
-ament_target_dependencies(${PROJECT_NAME}_post_processor
+ament_target_dependencies(${PROJECT_NAME}_post_processor SYSTEM
   ${dependencies}
 )
 target_include_directories(${PROJECT_NAME}_post_processor
@@ -172,28 +172,22 @@ install(
   INCLUDES DESTINATION include
 )
 
-# node composition
-# add_executable(${PROJECT_NAME}_composition
-#   src/composition/compose_nodes.cpp
-# )
-# ament_target_dependencies(${PROJECT_NAME}_composition
-#   rclcpp
-#   rclcpp_components
-# )
-# target_link_libraries(${PROJECT_NAME}_composition
-#   ${PROJECT_NAME}
-#   ${PROJECT_NAME}_post_processor
-# )
+add_executable(${PROJECT_NAME}_post_processor_node
+  src/node/post_processing_node.cpp
+)
 
-# target_include_directories(${PROJECT_NAME}_composition
-#   PUBLIC
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#     $<INSTALL_INTERFACE:include>
-# )
-# install(
-#   TARGETS ${PROJECT_NAME}_composition
-#   DESTINATION lib/${PROJECT_NAME}
-# )
+ament_target_dependencies(${PROJECT_NAME}_post_processor_node
+  ${dependencies}
+)
+
+target_link_libraries(${PROJECT_NAME}_post_processor_node
+${PROJECT_NAME}_post_processor
+)
+
+install(
+  TARGETS ${PROJECT_NAME}_post_processor_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 install(
   DIRECTORY include/

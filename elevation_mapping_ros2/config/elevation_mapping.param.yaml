@@ -3,6 +3,7 @@ elevation_mapping:
     # frame IDs
     map_frame: "map"
     robot_frame: "base_link"
+    map_publish_hz: 10
     # pose update
     use_pose_update: false
     pose_cache_size: 10

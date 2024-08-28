@@ -26,7 +26,7 @@ def generate_launch_description():
             name='pcd_publisher_node',
             output='screen',
             arguments=[ply_path],
-            remappings=[("pcd", "/point_cloud_perfect")], 
+            remappings=[("pcd", "/point_cloud_laser")], 
         ),
         Node(
             package=package_name, 

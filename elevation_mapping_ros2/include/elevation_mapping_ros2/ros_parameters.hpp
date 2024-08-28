@@ -218,6 +218,7 @@ inline SensorProcessorBase::CommonConfig getSensorProcessorConfig(
 {
     SensorProcessorBase::CommonConfig config;
     getStringParam(prefix+"sensor_frame", node_logger, node_params, config.sensor_frame_);
+    getStringParam(prefix+"logger_name", node_logger, node_params, config.logger_name_);
     getBoolParam(prefix+"use_voxel_filter", node_logger, node_params, config.use_voxel_filter_);
     getDoubleParam(prefix+"voxel_leaf_size", node_logger, node_params, config.voxel_leaf_size_);
     getDoubleParam(prefix+"pass_filter_lower_threshold", node_logger, node_params, config.pass_filter_lower_threshold_);

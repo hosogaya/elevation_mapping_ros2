@@ -56,14 +56,20 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
     for (size_t i=0; i<_point_cloud->size(); ++i)
     {
         auto& point = _point_cloud->points[i];
-        if (std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z)) continue;
+        if (std::isnan(point.x) || std::isnan(point.y) || std::isnan(point.z)) 
+        {
+            RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Point has NaN value");
+            continue;
+        }
         grid_map::Index index;
         grid_map::Position position(point.x, point.y);
         // Skip if it does not lie within the elevation map
         if (!raw_map_.getIndex(position, index))
         {
+            RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Point is out of elevation map");
             continue;
         }
+
         point_within_map_num++;
 
         auto& elevation = elevation_layer(index(0), index(1));
@@ -79,7 +85,11 @@ bool ElevationMap::add(PointCloudType::Ptr _point_cloud, Eigen::VectorXf& _varia
         auto& sensor_z_at_lowest_scan = sensor_z_at_lowest_scan_layer(index(0), index(1));
     
         const float point_variance = _variance(i);
-        if (std::isnan(point_variance)) continue;
+        if (std::isnan(point_variance)) 
+        {
+            RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Variance is NaN");
+            continue;
+        }
         if (!std::isfinite(elevation) || !std::isfinite(variance))
         {
             elevation = point.z;

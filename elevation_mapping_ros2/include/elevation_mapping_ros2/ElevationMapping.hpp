@@ -57,9 +57,10 @@ private:
     std::weak_ptr<std::remove_pointer<decltype(pub_raw_map_.get())>::type> captured_pub_raw_map_;
     
     void callbackPointcloud(const sensor_msgs::msg::PointCloud2& _point_cloud, const int topic_index);
-    // rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_point_cloud_;
-
     std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr> sub_point_clouds_;
+
+    void publishCallback();
+    rclcpp::TimerBase::SharedPtr publish_timer_;
 
     // visibility clean up
     void visibilityCleanUpCallback();

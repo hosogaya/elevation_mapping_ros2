@@ -89,7 +89,7 @@ bool RobotMotionUpdater::update(ElevationMap& _map, const PoseTransform& _pose_t
     _map.update(variance_update, horizontal_variance_update_x, horizontal_variance_update_y, horizontal_variance_update_xy, _time_stamp);
     pre_reduced_covariance_ = reduced_covariance;
     pre_robot_pose_ = _pose_transform;
-
+    pre_update_time_ = _time_stamp;
     return true;
 }
 

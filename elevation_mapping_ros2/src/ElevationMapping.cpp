@@ -15,17 +15,6 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
-    // subscriber
-    // sub_point_cloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    //     // "input/point_cloud", 10, std::bind(&ElevationMapping::callbackPointcloud, this, _1)
-    //     "input/point_cloud", rclcpp::QoS(10), 
-    //     [this](const sensor_msgs::msg::PointCloud2::UniquePtr msg)->void
-    //     {
-    //         RCLCPP_INFO(get_logger(), "Calling point cloud");
-    //         this->callbackPointcloud(*msg, 1);
-    //     }
-    // );
-
     for (int i=0; i<sensor_processors_.size(); ++i)
     {
         sub_point_clouds_.push_back(
@@ -61,6 +50,11 @@ ElevationMapping::ElevationMapping(const rclcpp::NodeOptions options)
         auto dt = std::chrono::microseconds(size_t(visibility_clean_up_duration_*1e6));
         visibility_clean_up_timer_ = create_wall_timer(dt, std::bind(&ElevationMapping::visibilityCleanUpCallback, this));
     }
+    
+    int map_publish_hz = declare_parameter("map_publish_hz", 10);
+    auto dt_pub = std::chrono::microseconds(size_t(double(1.0/double(map_publish_hz))*1e6));
+    publish_timer_ = create_wall_timer(dt_pub, std::bind(&ElevationMapping::publishCallback, this));
+
     clock_ = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
 }
 
@@ -133,20 +127,6 @@ void ElevationMapping::callbackPointcloud(const sensor_msgs::msg::PointCloud2& _
     double elapsed_add = std::chrono::duration_cast<std::chrono::milliseconds>(e_add - s_add).count();
     RCLCPP_DEBUG(get_logger(), "Add point Cloud time: %lf ms", elapsed_add);
 
-    if (use_and_publish_fused_map_)
-    {
-        map_->fuseAll(); 
-        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-        message = grid_map::GridMapRosConverter::toMessage(map_->getFusedMap(), map_->getFusedMap().getBasicLayers());
-        pub_raw_map_->publish(std::move(message));
-    }
-    else 
-    {
-        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
-        message = grid_map::GridMapRosConverter::toMessage(map_->getRawMap(), std::vector<std::string>{"elevation", "variance"});
-        pub_raw_map_->publish(std::move(message));
-    }
-
     std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
     RCLCPP_DEBUG(get_logger(), "elevation mapping processing time: %lf ms", elapsed);
@@ -214,6 +194,25 @@ bool ElevationMapping::updatePrediction(const rclcpp::Time& _time_stamp)
 
     RCLCPP_DEBUG(get_logger(), "Finished RobotMotionUpdater::update");
     return true;
+}
+
+void ElevationMapping::publishCallback()
+{
+    if (use_and_publish_fused_map_)
+    {
+        RCLCPP_DEBUG(get_logger(), "Fusing raw map and publishing it");
+        map_->fuseAll(); 
+        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
+        message = grid_map::GridMapRosConverter::toMessage(map_->getFusedMap(), map_->getFusedMap().getBasicLayers());
+        pub_raw_map_->publish(std::move(message));
+    }
+    else 
+    {
+        RCLCPP_DEBUG(get_logger(), "Publishing raw map");
+        grid_map_msgs::msg::GridMap::UniquePtr message(new grid_map_msgs::msg::GridMap);
+        message = grid_map::GridMapRosConverter::toMessage(map_->getRawMap(), std::vector<std::string>{"elevation", "variance"});
+        pub_raw_map_->publish(std::move(message));
+    }
 }
 
 void ElevationMapping::visibilityCleanUpCallback()
