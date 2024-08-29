@@ -308,7 +308,7 @@ bool ElevationMap::fuse(const grid_map::Index& top_left_index, const grid_map::I
     fused_map_.setTimestamp(raw_map_.getTimestamp());
     const auto end_time = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Map fusing takes %lf [ms]", elapsed);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Map fusing takes %lf [ms]", elapsed);
 
 
     return true;
@@ -317,7 +317,7 @@ bool ElevationMap::fuse(const grid_map::Index& top_left_index, const grid_map::I
 void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
 {
     auto start = std::chrono::system_clock::now();
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Calling visibility clean up");
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Calling visibility clean up");
     const rclcpp::Duration time_since_initialization = _time_stamp - initial_time_;
 
     // copy raw elevation map data
@@ -405,7 +405,7 @@ void ElevationMap::visibilityCleanup(const rclcpp::Time& _time_stamp)
 
     auto end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    RCLCPP_INFO(rclcpp::get_logger(logger_name_), "Finished visibility clean up. It takes %lf [ms]", elapsed);
+    RCLCPP_DEBUG(rclcpp::get_logger(logger_name_), "Finished visibility clean up. It takes %lf [ms]", elapsed);
 }
 
 bool ElevationMap::update(const grid_map::Matrix& _variance, const grid_map::Matrix& _horizontal_variance_x, const grid_map::Matrix& _horizontal_variance_y, const grid_map::Matrix& _horizontal_variance_xy, const rclcpp::Time& _time_stamp)
